@@ -35,7 +35,7 @@ export default function WalletContainer({ onTabChange }: WalletContainerProps) {
         </div>
       </main>
 
-      <Footer />
+      <Footer onTabChange={onTabChange} />
 
       {isWithdrawModalOpen && (
         <WithdrawFundsModal

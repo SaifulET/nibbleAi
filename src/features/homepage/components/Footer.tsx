@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 
-export default function Footer() {
+interface FooterProps {
+  onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
+}
+
+export default function Footer({ onTabChange }: FooterProps) {
   const [email, setEmail] = useState("");
 
   const handleSubscribe = (e: React.FormEvent) => {
@@ -72,24 +76,57 @@ export default function Footer() {
             <ul className="flex flex-col gap-[18px] text-base font-normal">
               <li>
                 <a
-                  href="mailto:support@nibble.ai?subject=Support%20Request"
+                  href={onTabChange ? undefined : "mailto:support@nibble.ai?subject=Support%20Request"}
+                  onClick={(e) => {
+                    if (onTabChange) {
+                      e.preventDefault();
+                      onTabChange("profile", "help");
+                    }
+                  }}
                   className="text-[#575757] hover:text-black leading-[19px] text-left cursor-pointer transition-colors focus:outline-none"
                 >
-                  Conturt us
+                  Contact us
                 </a>
               </li>
               <li>
-                <a href="#" className="text-[#434343] hover:text-black leading-[19px] transition-colors">
-                  privacy Policy
+                <a
+                  href={onTabChange ? undefined : "#"}
+                  onClick={(e) => {
+                    if (onTabChange) {
+                      e.preventDefault();
+                      onTabChange("profile", "privacy");
+                    }
+                  }}
+                  className="text-[#575757] hover:text-black leading-[19px] transition-colors cursor-pointer"
+                >
+                  Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-[#575757] hover:text-black text-sm font-medium leading-[17px] transition-colors">
-                  Terms &amp; Condition
+                <a
+                  href={onTabChange ? undefined : "#"}
+                  onClick={(e) => {
+                    if (onTabChange) {
+                      e.preventDefault();
+                      onTabChange("profile", "terms");
+                    }
+                  }}
+                  className="text-[#575757] hover:text-black leading-[19px] transition-colors cursor-pointer"
+                >
+                  Terms &amp; Conditions
                 </a>
               </li>
               <li>
-                <a href="#" className="text-[#575757] hover:text-black leading-[19px] transition-colors">
+                <a
+                  href={onTabChange ? undefined : "#"}
+                  onClick={(e) => {
+                    if (onTabChange) {
+                      e.preventDefault();
+                      onTabChange("profile", "faq");
+                    }
+                  }}
+                  className="text-[#575757] hover:text-black leading-[19px] transition-colors cursor-pointer"
+                >
                   FAQ
                 </a>
               </li>
@@ -131,9 +168,12 @@ export default function Footer() {
                     className="w-4 h-4 object-contain"
                   />
                 </span>
-                <span className="text-[#434343] leading-[19px] w-[210px]">
+                <a
+                  href="tel:+254585222001445"
+                  className="text-[#434343] hover:text-black leading-[19px] w-[210px] transition-colors"
+                >
                   +254585222001445
-                </span>
+                </a>
               </li>
               
               {/* Email Row */}
@@ -147,9 +187,12 @@ export default function Footer() {
                     className="w-[18px] h-[17px] object-contain"
                   />
                 </span>
-                <span className="text-[#434343] leading-[19px] w-[210px] break-all">
-                  hmtamimsarkar@gmail.com
-                </span>
+                <a
+                  href="mailto:support@nibble.ai"
+                  className="text-[#434343] hover:text-black leading-[19px] w-[210px] break-all transition-colors"
+                >
+                  support@nibble.ai
+                </a>
               </li>
             </ul>
           </div>
@@ -172,16 +215,36 @@ export default function Footer() {
             
             {/* Social media links (Frame 73) */}
             <div className="flex gap-9 items-center justify-center order-1 sm:order-2">
-              <a href="#" className="w-[19.26px] h-[19.26px] relative hover:scale-110 transition-transform">
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-[19.26px] h-[19.26px] relative hover:scale-110 transition-transform"
+              >
                 <Image src="/homepage/fbIcon.svg" alt="Facebook" fill className="object-contain" />
               </a>
-              <a href="#" className="w-[20.83px] h-[20.83px] relative hover:scale-110 transition-transform">
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-[20.83px] h-[20.83px] relative hover:scale-110 transition-transform"
+              >
                 <Image src="/homepage/lindln.svg" alt="LinkedIn" fill className="object-contain" />
               </a>
-              <a href="#" className="w-[25px] h-[25px] relative hover:scale-110 transition-transform">
+              <a
+                href="https://x.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-[25px] h-[25px] relative hover:scale-110 transition-transform"
+              >
                 <Image src="/homepage/twitter.svg" alt="Twitter" fill className="object-contain" />
               </a>
-              <a href="#" className="w-[20.83px] h-[20.83px] relative hover:scale-110 transition-transform">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-[20.83px] h-[20.83px] relative hover:scale-110 transition-transform"
+              >
                 <Image src="/homepage/instragram.svg" alt="Instagram" fill className="object-contain" />
               </a>
             </div>

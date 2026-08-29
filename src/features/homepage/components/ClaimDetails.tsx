@@ -122,7 +122,7 @@ export default function ClaimDetails({ onBack, onNavigate, onTabChange }: ClaimD
       </main>
 
       {/* Footer */}
-      <Footer />
+      <Footer onTabChange={onTabChange} />
 
       {/* Auth Modal Overlay (Blurred background, overlay card) */}
       {isModalOpen && (

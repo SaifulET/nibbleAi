@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# nibbleAi Rewards Platform
 
-## Getting Started
+A premium, state-of-the-art Web Application built with Next.js, TypeScript, and Tailwind CSS. The platform enables users to discover, claim, and review retail rebates, upload grocery purchase receipts, and redeem cashback rewards directly to their bank accounts.
 
-First, run the development server:
+## 🌟 Key Features
+
+1. **Offer Discovery & Details**:
+   - High-fidelity product offer grid with pagination, filters, and category blocks.
+   - Comprehensive offer detail views with item specs, claims procedures, and customer reviews.
+2. **Interactive Scanning & Uploads**:
+   - Receipt scanner component allowing camera capture and gallery uploads.
+   - Custom referral wizard allowing users to invite friends and track referral bonuses.
+3. **Redemptions & Wallet**:
+   - Real-time balance tracker displaying verified cashback earnings.
+   - Dual-stage withdrawal workflow:
+     - **Confirmation Modal**: Review withdrawal sum details and processing times (24–48 hours).
+     - **Bank Details Modal**: Collect routing and account details securely (savings/Current).
+4. **Interactive Chatbot Reviews**:
+   - A multi-step review wizard widget enabling users to write custom text reviews, pick preset suggestions, and rate items to unlock extra cashback.
+5. **Mobile-First Layout**:
+   - Hamburger sidebar menus on mobile screen viewports.
+   - Responsive scaling to adapt full-width cards and reduced search forms on narrow viewports.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Core Framework**: [Next.js (App Router)](https://nextjs.org/)
+- **Style Engine**: [Tailwind CSS](https://tailwindcss.com/)
+- **Programming Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Assets**: Styled using vector illustrations and Google Fonts (Inter)
+
+---
+
+## 🚀 Getting Started
+
+First, install package dependencies:
+
+```bash
+npm install
+```
+
+Start the local development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📦 Building for Production
 
-## Learn More
+Compile the optimized Next.js project bundle:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run the compiled application server:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm start
+```

@@ -56,7 +56,7 @@ export default function HomepageContainer({
       </main>
 
       {/* Footer Branding Links */}
-      <Footer />
+      <Footer onTabChange={onTabChange} />
     </div>
   );
 }

@@ -6,11 +6,11 @@ import Header from "../../homepage/components/Header";
 import Footer from "../../homepage/components/Footer";
 
 interface ProfileContainerProps {
-  initialView?: "menu" | "notifications";
+  initialView?: "menu" | "notifications" | "privacy" | "terms" | "faq" | "help";
   onBack: () => void;
   onSignOut: () => void;
   onClaimOffer?: () => void;
-  onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification") => void;
+  onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
 }
 
 export default function ProfileContainer({
@@ -21,7 +21,9 @@ export default function ProfileContainer({
   onTabChange,
 }: ProfileContainerProps) {
   const [activeView, setActiveView] = useState<"menu" | "edit" | "saved" | "privacy" | "terms" | "notifications" | "help" | "faq" | "contract-us">(() => {
-    return initialView === "notifications" ? "notifications" : "menu";
+    if (initialView === "notifications") return "notifications";
+    if (initialView === "privacy" || initialView === "terms" || initialView === "faq" || initialView === "help") return initialView;
+    return "menu";
   });
   const [prevInitialView, setPrevInitialView] = useState(initialView);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -30,7 +32,13 @@ export default function ProfileContainer({
   // Adjust state in render when initialView prop changes
   if (initialView !== prevInitialView) {
     setPrevInitialView(initialView);
-    setActiveView(initialView === "notifications" ? "notifications" : "menu");
+    if (initialView === "notifications") {
+      setActiveView("notifications");
+    } else if (initialView === "privacy" || initialView === "terms" || initialView === "faq" || initialView === "help") {
+      setActiveView(initialView);
+    } else {
+      setActiveView("menu");
+    }
   }
 
   // Form states for Edit Profile
@@ -539,7 +547,9 @@ export default function ProfileContainer({
                 onClick={() => setActiveView("menu")}
                 className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center hover:bg-gray-50 active:scale-[0.95] cursor-pointer focus:outline-none"
               >
-                <span className="text-xl">&larr;</span>
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </button>
               <h2 className="text-[24px] font-semibold leading-[29px] text-[#1F1D1D]">
                 Privacy Policy
@@ -570,7 +580,9 @@ export default function ProfileContainer({
                 onClick={() => setActiveView("menu")}
                 className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center hover:bg-gray-50 active:scale-[0.95] cursor-pointer focus:outline-none"
               >
-                <span className="text-xl">&larr;</span>
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </button>
               <h2 className="text-[24px] font-semibold leading-[29px] text-[#1F1D1D]">
                 Terms &amp; Condition
@@ -601,7 +613,9 @@ export default function ProfileContainer({
                 onClick={() => setActiveView("menu")}
                 className="absolute left-0 w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center hover:bg-gray-50 active:scale-[0.95] cursor-pointer focus:outline-none"
               >
-                <span className="text-xl">&larr;</span>
+                <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </button>
               <h2 className="text-[24px] font-semibold leading-[29px] text-[#1F1D1D]">
                 Notification
@@ -636,7 +650,9 @@ export default function ProfileContainer({
                 onClick={() => setActiveView("menu")}
                 className="w-8 h-8 rounded-full border border-gray-150 flex items-center justify-center hover:bg-gray-50 active:scale-[0.95] cursor-pointer focus:outline-none"
               >
-                <span className="text-sm">&larr;</span>
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </button>
             </div>
 
@@ -685,7 +701,9 @@ export default function ProfileContainer({
                 onClick={() => setActiveView("help")}
                 className="w-8 h-8 rounded-full border border-gray-150 flex items-center justify-center hover:bg-gray-50 active:scale-[0.95] cursor-pointer focus:outline-none"
               >
-                <span className="text-sm">&larr;</span>
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </button>
             </div>
 
@@ -767,7 +785,9 @@ export default function ProfileContainer({
                 onClick={() => setActiveView("help")}
                 className="w-8 h-8 rounded-full border border-gray-150 flex items-center justify-center hover:bg-gray-50 active:scale-[0.95] cursor-pointer focus:outline-none"
               >
-                <span className="text-sm">&larr;</span>
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </button>
             </div>
 
@@ -854,7 +874,7 @@ export default function ProfileContainer({
       </main>
 
       {/* Footer */}
-      <Footer />
+      <Footer onTabChange={onTabChange} />
     </div>
   );
 }

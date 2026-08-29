@@ -237,7 +237,7 @@ export default function ViewDetails({ onBack, onTabChange }: ViewDetailsProps) {
       </main>
 
       {/* Footer */}
-      <Footer />
+      <Footer onTabChange={onTabChange} />
     </div>
   );
 }

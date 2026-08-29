@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuthStage, SignInCredentials, SignUpCredentials } from "../types/auth.types";
 import SplashScreen from "./SplashScreen";
 import Onboarding from "./Onboarding";
@@ -19,9 +19,37 @@ import WalletContainer from "@/features/wallet/components/WalletContainer";
 
 export default function AuthContainer() {
   const [stage, setStage] = useState<AuthStage>("splash");
-  const [profileInitialView, setProfileInitialView] = useState<"menu" | "notifications">("menu");
+  const [profileInitialView, setProfileInitialView] = useState<"menu" | "notifications" | "privacy" | "terms" | "faq" | "help">("menu");
 
   const [autoOpenReviewItem, setAutoOpenReviewItem] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) {
+        const timer = setTimeout(() => {
+          if (tab === "offer" || tab === "brand") {
+            setStage("home");
+          } else if (tab === "wallet") {
+            setStage("wallet");
+          } else if (tab === "scan") {
+            setStage("my-reward");
+          } else if (tab === "profile") {
+            setProfileInitialView("menu");
+            setStage("profile");
+          } else if (tab === "notification") {
+            setProfileInitialView("notifications");
+            setStage("profile");
+          } else if (tab === "privacy" || tab === "terms" || tab === "faq") {
+            setProfileInitialView(tab);
+            setStage("profile");
+          }
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
 
   const handleTabChange = (
     tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification",
@@ -40,7 +68,11 @@ export default function AuthContainer() {
     } else if (tab === "scan") {
       setStage("my-reward");
     } else if (tab === "profile") {
-      setProfileInitialView("menu");
+      if (extra === "privacy" || extra === "terms" || extra === "faq" || extra === "help") {
+        setProfileInitialView(extra);
+      } else {
+        setProfileInitialView("menu");
+      }
       setStage("profile");
     } else if (tab === "notification") {
       setProfileInitialView("notifications");

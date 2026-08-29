@@ -174,7 +174,7 @@ export default function MyRewardContainer({
         </div>
       </main>
 
-      <Footer />
+      <Footer onTabChange={onTabChange} />
 
       {activeReviewItem && (
         <ReviewChatModal
