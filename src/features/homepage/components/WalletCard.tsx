@@ -22,7 +22,7 @@ export default function WalletCard({ balance = 51.25, onViewWallet }: WalletCard
           {/* Wallet Label Row (Frame 2147229084) */}
           <div className="flex items-center gap-[12px] h-[39px] justify-center">
             <Image
-              src="/homePage/wallet.svg"
+              src="/homepage/wallet.svg"
               alt="Wallet Icon"
               width={38}
               height={38}
@@ -36,7 +36,7 @@ export default function WalletCard({ balance = 51.25, onViewWallet }: WalletCard
           {/* Balance Amount Row (Frame 2147229085) */}
           <div className="flex items-center gap-[12px] h-[39px] justify-center">
             <Image
-              src="/homePage/money (2).svg"
+              src="/homepage/money (2).svg"
               alt="Money Icon"
               width={38}
               height={38}
