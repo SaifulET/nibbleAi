@@ -33,7 +33,7 @@ export default function ReceiptHistoryCard({ receipts }: ReceiptHistoryCardProps
 
       {/* Receipts items mapping */}
       <div className="flex flex-col w-full">
-        {receipts.map((receipt, idx) => (
+        {receipts.length ? receipts.map((receipt, idx) => (
           <div
             key={idx}
             className="w-full h-[65px] border-b border-[#E0E0E0] last:border-b-0 flex items-center justify-between py-[10px]"
@@ -55,7 +55,13 @@ export default function ReceiptHistoryCard({ receipts }: ReceiptHistoryCardProps
               </span>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="w-full min-h-[65px] border-b border-[#E0E0E0] last:border-b-0 flex items-center py-[10px]">
+            <span className="text-[14px] font-normal leading-[17px] text-[#575757]">
+              No receipt history from the backend.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Bottom Description */}

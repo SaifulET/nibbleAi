@@ -1,7 +1,3 @@
-"use client";
-
-import { useState } from "react";
-
 interface RewardItem {
   id: string;
   title: string;
@@ -9,12 +5,17 @@ interface RewardItem {
   status: "verified" | "pending";
 }
 
-export default function RecentRewardsCard() {
-  const [rewards] = useState<RewardItem[]>([
-    { id: "rw-1", title: "Rebate- Lesser Evil", amount: "$1.00", status: "verified" },
-    { id: "rw-2", title: "Rebate- Lesser Evil", amount: "$2.00", status: "pending" },
-    { id: "rw-3", title: "Rebate- Lesser Evil", amount: "$5.00", status: "verified" },
-  ]);
+interface RecentRewardsCardProps {
+  redemptions?: Record<string, unknown>[];
+}
+
+export default function RecentRewardsCard({ redemptions = [] }: RecentRewardsCardProps) {
+  const rewards: RewardItem[] = redemptions.map((item) => ({
+    id: String(item.id),
+    title: String(item.campaign_name || item.brand_name || "Reward"),
+    amount: `$${String(item.reward_amount || item.amount || "0.00")}`,
+    status: item.status === "pending" ? "pending" : "verified",
+  }));
 
   return (
     <div className="w-full max-w-[716px] bg-[#FEFEFE] shadow-[0px_4px_4px_rgba(0,0,0,0.12)] rounded-[12px] p-6 sm:py-[28px] sm:px-[12px] flex flex-col gap-[16px] border border-gray-100/60">
@@ -28,7 +29,7 @@ export default function RecentRewardsCard() {
 
         {/* List of items */}
         <div className="flex flex-col w-full">
-          {rewards.map((item) => (
+          {rewards.length ? rewards.map((item) => (
             <div
               key={item.id}
               className="w-full h-[50px] border-b border-[#E0E0E0] last:border-b-0 flex items-center justify-between py-[10px] gap-4"
@@ -62,7 +63,13 @@ export default function RecentRewardsCard() {
                 )}
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="w-full h-[50px] border-b border-[#E0E0E0] last:border-b-0 flex items-center py-[10px]">
+              <span className="text-[16px] font-normal leading-[19px] text-[#575757]">
+                No recent rewards from the backend.
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

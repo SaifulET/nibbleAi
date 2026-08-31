@@ -11,6 +11,7 @@ import InviteFriendsCard from "./InviteFriendsCard";
 import UploadReceiptCard from "./UploadReceiptCard";
 import ReviewChatModal from "./ReviewChatModal";
 import InviteFriendsModal from "./InviteFriendsModal";
+import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
 
 interface MyRewardContainerProps {
   onTabChange: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
@@ -41,6 +42,20 @@ export default function MyRewardContainer({
   onClearAutoOpenReview,
 }: MyRewardContainerProps) {
   const [activeReviewItem, setActiveReviewItem] = useState<string | null>(null);
+  const {
+    receipts: apiReceipts,
+    activities: apiActivities,
+    reservations,
+    reviewOpportunities,
+    unreadCount,
+    loadRewardsHub,
+    uploadReceipt,
+    inviteFriend,
+  } = useConsumerApiStore();
+
+  useEffect(() => {
+    void loadRewardsHub();
+  }, [loadRewardsHub]);
 
   useEffect(() => {
     if (autoOpenReviewItem) {
@@ -53,59 +68,45 @@ export default function MyRewardContainer({
   }, [autoOpenReviewItem, onClearAutoOpenReview]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   
-  const [receipts, setReceipts] = useState<Receipt[]>([
-    { title: "Noosa 50$ Rebates", date: "Apr 2,2025", status: "Verified" },
-    { title: "Noosa 50$ Rebates", date: "Apr 2,2025", status: "Pending" },
-    { title: "Noosa 50$ Rebates", date: "Apr 2,2025", status: "Rejected" },
-  ]);
+  const [localReceipts, setLocalReceipts] = useState<Receipt[]>([]);
+  const [localActivities, setLocalActivities] = useState<Activity[]>([]);
 
-  const [activities, setActivities] = useState<Activity[]>([
-    {
-      id: "act-1",
-      type: "verified",
-      title: "Rebate Verified- $1.00 added to wallet",
-      subtitle: "Whole Foods Market- Apr 2,2025",
-      statusText: "Verified",
-      statusColor: "text-[#00A671]",
-      iconBg: "#00D855",
-      iconSrc: "/myreward/tick-02.svg",
-    },
-    {
-      id: "act-2",
-      type: "pending",
-      title: "Receipt Pending Review",
-      subtitle: "Whole Foods Market- Apr 2,2025",
-      statusText: "Pending",
-      statusColor: "text-[#D7930A]",
-      iconBg: "#FF9400",
-      iconSrc: "/myreward/watch-01.svg",
-    },
-    {
-      id: "act-3",
-      type: "rejected",
-      title: "Review Rejected- $1.00",
-      subtitle: "Whole Foods Market- Apr 2,2025",
-      statusText: "Rejected",
-      statusColor: "text-[#FF5C5C]",
-      iconBg: "transparent",
-      iconSrc: "/myreward/star.svg",
-    },
-    {
-      id: "act-4",
-      type: "referral",
-      title: "Referral Bonus $5.00 Added",
-      subtitle: "Your friend completed their first review!",
-      statusText: "Bonus Earned",
-      statusColor: "text-[#4E31E3]",
-      iconBg: "#4E31E3",
-      iconSrc: "/myreward/user-circle-02.svg",
-    },
-  ]);
+  const receipts: Receipt[] = apiReceipts.length
+    ? apiReceipts.map((receipt) => ({
+        title: String(receipt.campaign_name || receipt.merchant || "Receipt"),
+        date: String(receipt.created_at || "").slice(0, 10),
+        status:
+          receipt.status === "verified"
+            ? "Verified"
+            : receipt.status === "rejected"
+              ? "Rejected"
+              : "Pending",
+      }))
+    : localReceipts;
 
-  const handleUploadSuccess = (fileName: string) => {
+  const activities: Activity[] = apiActivities.length
+    ? apiActivities.map((activity) => ({
+        id: String(activity.id || activity.created_at || activity.title || "activity"),
+        type: activity.entry_type === "credit" ? "verified" as const : "pending" as const,
+        title: String(activity.title || activity.description || "Activity"),
+        subtitle: String(activity.created_at || "").slice(0, 10),
+        statusText: String(activity.category || activity.entry_type || "Activity"),
+        statusColor: activity.entry_type === "credit" ? "text-[#00A671]" : "text-[#D7930A]",
+        iconBg: activity.entry_type === "credit" ? "#00D855" : "#FF9400",
+        iconSrc: activity.entry_type === "credit" ? "/myreward/tick-02.svg" : "/myreward/watch-01.svg",
+      }))
+    : localActivities;
+
+  const handleUploadSuccess = async (file: File) => {
+    const reservationId = String(reservations[0]?.id || "");
+    if (reservationId) {
+      await uploadReceipt(reservationId, file);
+      return;
+    }
+
     // Append mock data to receipt list
-    const newReceipt: Receipt = { title: `${fileName.split(".")[0]} Rebate`, date: "Today", status: "Pending" };
-    setReceipts((prev) => [newReceipt, ...prev]);
+    const newReceipt: Receipt = { title: `${file.name.split(".")[0]} Rebate`, date: "Today", status: "Pending" };
+    setLocalReceipts((prev) => [newReceipt, ...prev]);
 
     // Append mock activity
     const newActivity: Activity = {
@@ -118,7 +119,7 @@ export default function MyRewardContainer({
       iconBg: "#FF9400",
       iconSrc: "/myreward/watch-01.svg",
     };
-    setActivities((prev) => [newActivity, ...prev]);
+    setLocalActivities((prev) => [newActivity, ...prev]);
   };
 
   const handleReviewSubmit = (summaryText: string) => {
@@ -135,12 +136,12 @@ export default function MyRewardContainer({
       iconBg: "#00D855",
       iconSrc: "/myreward/tick-02.svg",
     };
-    setActivities((prev) => [newActivity, ...prev]);
+    setLocalActivities((prev) => [newActivity, ...prev]);
   };
 
   return (
     <div className="w-full bg-[#FEFEFE] min-h-screen flex flex-col font-sans select-none">
-      <Header activeTab="scan" onTabChange={onTabChange} />
+      <Header activeTab="scan" onTabChange={onTabChange} unreadCount={unreadCount} />
 
       <main className="flex-grow flex flex-col items-center py-10 px-4 sm:px-6 max-w-[1440px] mx-auto w-full relative">
         <h1 className="text-[32px] font-medium leading-[39px] text-[#1F1D1D] text-center mb-10 mt-4">
@@ -152,9 +153,9 @@ export default function MyRewardContainer({
           <PendingRebatesCard onUploadReceiptClick={() => {
             const el = document.getElementById("upload-receipt-section");
             el?.scrollIntoView({ behavior: "smooth" });
-          }} />
+          }} reservations={reservations} />
           
-          <EarnMoreCard onStartReviewClick={(item) => setActiveReviewItem(item)} />
+          <EarnMoreCard opportunities={reviewOpportunities} onStartReviewClick={(item) => setActiveReviewItem(item)} />
           
           <ReceiptHistoryCard receipts={receipts} />
           
@@ -189,6 +190,7 @@ export default function MyRewardContainer({
           onClose={() => setIsInviteModalOpen(false)}
           onSend={(name, contact) => {
             setIsInviteModalOpen(false);
+            void inviteFriend(name, contact);
             const newActivity: Activity = {
               id: `act-${Date.now()}`,
               type: "referral",
@@ -199,7 +201,7 @@ export default function MyRewardContainer({
               iconBg: "#4E31E3",
               iconSrc: "/myreward/user-circle-02.svg",
             };
-            setActivities((prev) => [newActivity, ...prev]);
+            setLocalActivities((prev) => [newActivity, ...prev]);
           }}
         />
       )}

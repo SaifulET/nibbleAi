@@ -5,7 +5,7 @@ import Image from "next/image";
 
 interface UploadReceiptCardProps {
   onUploadStart: () => void;
-  onUploadSuccess: (fileName: string) => void;
+  onUploadSuccess: (file: File) => void | Promise<void>;
 }
 
 export default function UploadReceiptCard({ onUploadStart, onUploadSuccess }: UploadReceiptCardProps) {
@@ -20,10 +20,9 @@ export default function UploadReceiptCard({ onUploadStart, onUploadSuccess }: Up
     setIsUploading(true);
     onUploadStart();
 
-    setTimeout(() => {
+    void Promise.resolve(onUploadSuccess(file)).finally(() => {
       setIsUploading(false);
-      onUploadSuccess(file.name);
-    }, 1800);
+    });
   };
 
   const triggerUploadClick = () => {

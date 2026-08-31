@@ -16,12 +16,26 @@ import ViewDetails from "@/features/homepage/components/ViewDetails";
 import ProfileContainer from "@/features/profile/components/ProfileContainer";
 import MyRewardContainer from "@/features/myreward/components/MyRewardContainer";
 import WalletContainer from "@/features/wallet/components/WalletContainer";
+import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
 
 export default function AuthContainer() {
   const [stage, setStage] = useState<AuthStage>("splash");
   const [profileInitialView, setProfileInitialView] = useState<"menu" | "notifications" | "privacy" | "terms" | "faq" | "help">("menu");
 
   const [autoOpenReviewItem, setAutoOpenReviewItem] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+  const [authFlow, setAuthFlow] = useState<"signup" | "password-reset" | null>(null);
+  const [passwordResetCode, setPasswordResetCode] = useState("");
+  const {
+    login,
+    register,
+    forgotPassword,
+    resetPassword,
+    verifyEmail,
+    logout,
+    loadOfferDetails,
+    error,
+  } = useConsumerApiStore();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -84,29 +98,61 @@ export default function AuthContainer() {
     setStage("onboarding");
   };
 
-  const handleSignInSubmit = (data: SignInCredentials) => {
-    console.log("Sign In data:", data);
-    setStage("home");
+  const handleSignInSubmit = async (data: SignInCredentials) => {
+    if (!data.password) return;
+    try {
+      await login(data.email, data.password, data.rememberMe);
+      setStage("home");
+    } catch {
+      // Store keeps the displayable error.
+    }
   };
 
-  const handleSignUpSubmit = (data: SignUpCredentials) => {
-    console.log("Sign Up data:", data);
-    setStage("signin");
+  const handleSignUpSubmit = async (data: SignUpCredentials) => {
+    if (!data.password) return;
+    try {
+      await register(data.fullName, data.email, data.password);
+      setAuthFlow("signup");
+      setStage("verify-email");
+    } catch {
+      // Store keeps the displayable error.
+    }
   };
 
-  const handleForgotPasswordSubmit = (email: string) => {
-    console.log("Forgot Password email:", email);
-    setStage("verify-email");
+  const handleForgotPasswordSubmit = async (email: string) => {
+    try {
+      await forgotPassword(email);
+      setAuthFlow("password-reset");
+      setStage("verify-email");
+    } catch {
+      // Store keeps the displayable error.
+    }
   };
 
-  const handleVerifyEmailSubmit = (otp: string) => {
-    console.log("Verified email with OTP:", otp);
-    setStage("reset-password");
+  const handleVerifyEmailSubmit = async (otp: string) => {
+    if (authFlow === "password-reset") {
+      setPasswordResetCode(otp);
+      setStage("reset-password");
+      return;
+    }
+
+    try {
+      await verifyEmail(otp);
+      setStage("signin");
+    } catch {
+      // Store keeps the displayable error.
+    }
   };
 
-  const handleResetPasswordSubmit = (password: string) => {
-    console.log("Password reset success with password length:", password.length);
-    setStage("signin");
+  const handleResetPasswordSubmit = async (password: string) => {
+    try {
+      await resetPassword(passwordResetCode, password);
+      setAuthFlow(null);
+      setPasswordResetCode("");
+      setStage("signin");
+    } catch {
+      // Store keeps the displayable error.
+    }
   };
 
   // Render Splash Screen directly
@@ -128,8 +174,16 @@ export default function AuthContainer() {
     return (
       <div className="animate-fade-in">
         <HomepageContainer
-          onClaimOffer={() => setStage("claim-details")}
-          onViewOffer={() => setStage("view-details")}
+          onClaimOffer={(campaignId) => {
+            setSelectedCampaignId(campaignId || "");
+            if (campaignId) void loadOfferDetails(campaignId);
+            setStage("claim-details");
+          }}
+          onViewOffer={(campaignId) => {
+            setSelectedCampaignId(campaignId || "");
+            if (campaignId) void loadOfferDetails(campaignId);
+            setStage("view-details");
+          }}
           onTabChange={handleTabChange}
         />
       </div>
@@ -141,6 +195,7 @@ export default function AuthContainer() {
     return (
       <div className="animate-fade-in">
         <ClaimDetails
+          campaignId={selectedCampaignId}
           onBack={() => setStage("home")}
           onNavigate={setStage}
           onTabChange={handleTabChange}
@@ -154,6 +209,7 @@ export default function AuthContainer() {
     return (
       <div className="animate-fade-in">
         <ViewDetails
+          campaignId={selectedCampaignId}
           onBack={() => setStage("home")}
           onTabChange={handleTabChange}
         />
@@ -168,8 +224,16 @@ export default function AuthContainer() {
         <ProfileContainer
           initialView={profileInitialView}
           onBack={() => setStage("home")}
-          onSignOut={() => setStage("onboarding")}
+          onSignOut={() => {
+            void logout();
+            setStage("onboarding");
+          }}
           onClaimOffer={() => setStage("claim-details")}
+          onSelectOffer={(campaignId) => {
+            setSelectedCampaignId(campaignId);
+            void loadOfferDetails(campaignId);
+            setStage("claim-details");
+          }}
           onTabChange={handleTabChange}
         />
       </div>
@@ -204,6 +268,11 @@ export default function AuthContainer() {
   return (
     <AuthLayout>
       <div className="animate-fade-in w-full flex justify-center">
+        {error && (
+          <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm text-red-600 shadow-lg">
+            {error}
+          </div>
+        )}
         {stage === "signin" && (
           <SignInForm
             onNavigate={setStage}

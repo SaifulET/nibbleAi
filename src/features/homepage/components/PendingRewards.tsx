@@ -3,11 +3,21 @@
 import Image from "next/image";
 
 interface PendingRewardsProps {
+  reservations?: Record<string, unknown>[];
+  reviewOpportunities?: Record<string, unknown>[];
   onUploadReceiptClick?: () => void;
   onLeaveReviewClick?: (itemName: string) => void;
 }
 
-export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClick }: PendingRewardsProps) {
+export default function PendingRewards({
+  reservations = [],
+  reviewOpportunities = [],
+  onUploadReceiptClick,
+  onLeaveReviewClick,
+}: PendingRewardsProps) {
+  const pendingReservation = reservations[0];
+  const reviewOpportunity = reviewOpportunities[0];
+
   return (
     <div className="w-full max-w-[1137px] mx-auto font-sans flex flex-col gap-6">
       {/* Title */}
@@ -17,13 +27,13 @@ export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClic
 
       {/* Cards list (Figma Frame 2147229293 layout width 760px on desktop) */}
       <div className="flex flex-wrap gap-8 items-center justify-center lg:justify-start">
-        {/* Card 1: Upload Receipt Pending (Frame 2147229291) */}
+        {pendingReservation ? (
         <div className="w-full max-w-[364px] h-[156px] bg-[#FEFEFE] shadow-[0px_2px_7.6px_rgba(0,0,0,0.12)] rounded-lg p-2 pl-3 flex gap-[12px] items-center border border-gray-50 flex-shrink-0">
           {/* Image (Rectangle 34628225) */}
           <div className="w-[100px] h-[111px] bg-gray-50 rounded-lg overflow-hidden relative flex-shrink-0">
             <Image
               src="/homepage/rewardImage.svg"
-              alt="Happy Meal Deal"
+              alt={String(pendingReservation.product_name || "Pending reward")}
               fill
               sizes="100px"
               className="object-cover"
@@ -36,14 +46,14 @@ export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClic
             <div className="w-full flex flex-col gap-1.5">
               {/* Brand & Expiry (Frame 2147228975) */}
               <div className="w-full h-[15px] flex justify-between items-center text-[12px] font-normal leading-[15px] text-[#4D4D4D]">
-                <span className="truncate pr-1">McDonald&apos;s</span>
-                <span className="flex-shrink-0">Expires 2024-01-30</span>
+                <span className="truncate pr-1">{String(pendingReservation.brand_name || "Brand")}</span>
+                <span className="flex-shrink-0">Expires {String(pendingReservation.expires_at || "").slice(0, 10)}</span>
               </div>
 
               {/* Title & Rating (Frame 2147229110) */}
               <div className="w-full flex flex-col gap-1">
                 <h3 className="text-[16px] font-semibold leading-[19px] text-[#2D2D2D] truncate w-full">
-                  Happy Meal Deal
+                  {String(pendingReservation.product_name || pendingReservation.campaign_name || "Pending rebate")}
                 </h3>
                 
                 {/* Rating (Frame 2147228493) */}
@@ -55,7 +65,7 @@ export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClic
                       </svg>
                     ))}
                   </div>
-                  <span className="truncate">4.00 (100)</span>
+                  <span className="truncate">{String(pendingReservation.reward_amount || "0.00")} reward</span>
                 </div>
               </div>
             </div>
@@ -65,18 +75,19 @@ export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClic
               onClick={onUploadReceiptClick}
               className="w-full max-w-[220px] h-[34px] bg-gradient-to-b from-[#3E3EDF] to-[#3E3EDF] hover:opacity-90 active:scale-[0.98] text-[#FEFEFE] text-[18px] font-medium leading-[22px] rounded-lg shadow-[0_4px_4px_rgba(0,0,0,0.12),inset_0_4px_4px_rgba(255,255,255,0.12)] flex items-center justify-center cursor-pointer focus:outline-none min-w-0"
             >
-              Uploads Receipt
+              Upload Receipt
             </button>
           </div>
         </div>
+        ) : null}
 
-        {/* Card 2: Leave Review Pending (Frame 2147229292) */}
+        {reviewOpportunity ? (
         <div className="w-full max-w-[364px] h-[153px] bg-[#FEFEFE] shadow-[0px_2px_7.6px_rgba(0,0,0,0.12)] rounded-lg p-2 pl-3 flex gap-[12px] items-center border border-gray-50 flex-shrink-0">
           {/* Image */}
           <div className="w-[100px] h-[111px] bg-gray-50 rounded-lg overflow-hidden relative flex-shrink-0">
             <Image
               src="/homepage/rewardImage.svg"
-              alt="Happy Meal Deal"
+              alt={String(reviewOpportunity.product_name || "Review opportunity")}
               fill
               sizes="100px"
               className="object-cover"
@@ -89,14 +100,14 @@ export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClic
             <div className="w-full flex flex-col gap-1.5">
               {/* Brand & Expiry (Frame 2147228975) */}
               <div className="w-full h-[15px] flex justify-between items-center text-[12px] font-normal leading-[15px] text-[#4D4D4D]">
-                <span className="truncate pr-1">McDonald&apos;s</span>
-                <span className="flex-shrink-0">Expires 2024-01-30</span>
+                <span className="truncate pr-1">{String(reviewOpportunity.brand_name || "Brand")}</span>
+                <span className="flex-shrink-0">Expires {String(reviewOpportunity.expires_at || "").slice(0, 10)}</span>
               </div>
 
               {/* Title & Bonus Review (Frame 2147229110) */}
               <div className="w-full flex flex-col gap-1">
                 <h3 className="text-[16px] font-semibold leading-[19px] text-[#2D2D2D] truncate w-full">
-                  Happy Meal Deal
+                  {String(reviewOpportunity.product_name || "Review opportunity")}
                 </h3>
                 <span className="text-[14px] font-medium leading-[17px] text-[#2D2D2D] truncate">
                   Bonus Review
@@ -106,13 +117,20 @@ export default function PendingRewards({ onUploadReceiptClick, onLeaveReviewClic
 
             {/* CTA Button (CTA Large) */}
             <button
-              onClick={() => onLeaveReviewClick?.("Happy Meal Deal")}
+              onClick={() => onLeaveReviewClick?.(String(reviewOpportunity.product_name || reviewOpportunity.id || "Review opportunity"))}
               className="w-full max-w-[220px] h-[34px] bg-gradient-to-b from-[#FBDC40] to-[#FBDC40] hover:opacity-90 active:scale-[0.98] text-[#1F1D1D] text-[18px] font-medium leading-[22px] rounded-lg shadow-[0_4px_4px_rgba(0,0,0,0.12),inset_0_4px_4px_rgba(255,255,255,0.12)] flex items-center justify-center cursor-pointer focus:outline-none min-w-0"
             >
-              Leave Review for $1
+              Leave Review for ${String(reviewOpportunity.reward_amount || "1.00")}
             </button>
           </div>
         </div>
+        ) : null}
+
+        {!pendingReservation && !reviewOpportunity && (
+          <div className="w-full rounded-lg border border-gray-100 bg-white p-6 text-sm text-gray-400 shadow-[0px_2px_7.6px_rgba(0,0,0,0.08)]">
+            No pending rewards from the backend.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,33 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Header from "./Header";
 import Footer from "./Footer";
+import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
+import { displayOffer } from "../lib/offerMappers";
 
 interface ClaimDetailsProps {
+  campaignId?: string;
   onBack: () => void;
   onNavigate: (stage: "signin" | "signup" | "view-details") => void;
   onTabChange: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
 }
 
-export default function ClaimDetails({ onBack, onNavigate, onTabChange }: ClaimDetailsProps) {
+export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChange }: ClaimDetailsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const {
+    accessToken,
+    selectedOffer,
+    offers,
+    unreadCount,
+    status,
+    error,
+    loadOfferDetails,
+    claimOffer,
+  } = useConsumerApiStore();
 
-  const handleClaimClick = () => {
-    setIsModalOpen(true);
+  useEffect(() => {
+    if (campaignId) void loadOfferDetails(campaignId);
+  }, [campaignId, loadOfferDetails]);
+
+  const fallbackOffer = offers.find((offer) => String(offer.campaign_id ?? offer.id) === campaignId);
+  const offer = selectedOffer || fallbackOffer;
+  const details = offer ? displayOffer(offer) : null;
+
+  const handleClaimClick = async () => {
+    if (!accessToken) {
+      setIsModalOpen(true);
+      return;
+    }
+
+    const id = campaignId || details?.id;
+    if (!id) {
+      setMessage("No backend campaign id was found for this offer.");
+      return;
+    }
+
+    try {
+      await claimOffer(id);
+      setMessage("Offer claimed. Upload your receipt to complete the reward.");
+      onTabChange("scan");
+    } catch {
+      setMessage(null);
+    }
   };
 
   return (
     <div className="w-full bg-[#FEFEFE] min-h-screen flex flex-col font-sans select-none relative">
       {/* Header */}
-      <Header activeTab="offer" onTabChange={onTabChange} />
+      <Header activeTab="offer" onTabChange={onTabChange} unreadCount={unreadCount} />
 
       {/* Main Page Layout Wrapper */}
       <main className="flex-grow flex flex-col items-center py-10 px-4 sm:px-6 max-w-[1440px] mx-auto w-full relative">
         {/* Brand Name Title */}
         <h1 className="text-[32px] font-bold text-[#1F1D1D] text-center mb-6 mt-4">
-          Brand Name
+          {details?.brand || "Offer Details"}
         </h1>
 
         {/* Claim Details Card (Frame 2147229230) */}
@@ -40,12 +79,12 @@ export default function ClaimDetails({ onBack, onNavigate, onTabChange }: ClaimD
 
             {/* $10% OFF */}
             <h2 className="text-[48px] font-semibold leading-[58px] text-[#FEFEFE] text-center tracking-tight">
-              $10% OFF
+              {details?.rewardLabel || "Reward"}
             </h2>
             
             {/* Subtext */}
             <p className="text-[16px] font-normal leading-[19px] text-[#FEFEFE] text-center">
-              Buy, Upload &amp; Get Reward Instantly
+              Buy, upload, and get rewarded after verification
             </p>
           </div>
 
@@ -54,13 +93,19 @@ export default function ClaimDetails({ onBack, onNavigate, onTabChange }: ClaimD
             
             {/* Popcorn bag image (0E4EF3F6-89A0-44D4-B898-AF59D3F0B5B2) */}
             <div className="w-[179px] h-[179px] relative bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100/60">
-              <Image
-                src="/homepage/rewardImage.svg"
-                alt="Product Offer Image"
-                fill
-                sizes="179px"
-                className="object-contain p-2"
-              />
+              {details?.image ? (
+                <Image
+                  src={details.image}
+                  alt={details.title || "Backend offer image"}
+                  fill
+                  sizes="179px"
+                  className="object-contain p-2"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
+                  No image returned
+                </div>
+              )}
             </div>
 
             {/* Details Box (Frame 2147229239) */}
@@ -76,12 +121,14 @@ export default function ClaimDetails({ onBack, onNavigate, onTabChange }: ClaimD
                     </svg>
                   ))}
                 </div>
-                <span className="truncate">4.00 (100)</span>
+                <span className="truncate">
+                  {Number(details?.rating || 0).toFixed(2)} ({details?.reviewsCount || 0})
+                </span>
               </div>
 
               {/* Description message */}
               <p className="text-[#4D4D4D] text-[14px] font-normal leading-[17px] text-center w-full max-w-[335px]">
-                Shoppers love this snack! earn- just upload you receipt.
+                {details?.description || "Claim this backend offer and upload your receipt to receive the reward."}
               </p>
 
               {/* CTA Large Claim button (Frame 2147229219) */}
@@ -90,13 +137,23 @@ export default function ClaimDetails({ onBack, onNavigate, onTabChange }: ClaimD
                 className="w-full max-w-[197px] h-[46px] bg-gradient-to-b from-[#3E3EDF] to-[#3E3EDF] hover:opacity-90 active:scale-[0.98] text-[#FEFEFE] text-[16px] font-medium leading-[24px] rounded-lg shadow-[0_4px_4px_rgba(0,0,0,0.12),inset_0_4px_4px_rgba(255,255,255,0.12)] flex items-center justify-center cursor-pointer transition-all focus:outline-none"
               >
                 Claim Offer
-              </button>
+            </button>
+            {message && (
+              <p className="text-center text-[13px] font-medium text-[#00A671]">
+                {message}
+              </p>
+            )}
+            {error && status === "error" && (
+              <p className="text-center text-[13px] font-medium text-[#E65353]">
+                {error}
+              </p>
+            )}
             </div>
 
             {/* Sub details block (Frame 2147229237) */}
             <div className="w-full max-w-[335px] flex flex-col items-center gap-[4px] mt-2">
               <p className="text-[#4D4D4D] text-[14px] font-normal leading-[17px] text-center w-full">
-                No account? You can still earn- just upload you receipt.
+                {details?.expires ? `Offer expires ${details.expires}.` : "Sign in, claim this offer, then upload your receipt."}
               </p>
               
               {/* More Details link (Frame 2147229236) */}

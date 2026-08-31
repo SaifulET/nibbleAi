@@ -30,7 +30,7 @@ export default function ActivityHistoryCard({ activities, onViewFullHistoryClick
 
       {/* List (Frame 2147229254 etc) */}
       <div className="flex flex-col w-full">
-        {activities.map((item) => (
+        {activities.length ? activities.map((item) => (
           <div
             key={item.id}
             className="w-full min-h-[75px] border-b border-[#E0E0E0] last:border-b-0 flex items-center justify-between py-3.5 gap-2"
@@ -81,7 +81,13 @@ export default function ActivityHistoryCard({ activities, onViewFullHistoryClick
               {item.statusText}
             </span>
           </div>
-        ))}
+        )) : (
+          <div className="w-full min-h-[75px] border-b border-[#E0E0E0] last:border-b-0 flex items-center py-3.5">
+            <span className="text-[14px] font-normal leading-[17px] text-[#575757]">
+              No activity history from the backend.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* View Full History Button Link */}

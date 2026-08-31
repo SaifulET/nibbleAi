@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
+import { imageUrl, text } from "../lib/offerMappers";
 
 interface HeaderProps {
   activeTab?: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification";
   onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification") => void;
+  unreadCount?: number;
 }
 
-export default function Header({ activeTab = "offer", onTabChange }: HeaderProps) {
+export default function Header({ activeTab = "offer", onTabChange, unreadCount = 0 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const user = useConsumerApiStore((state) => state.user);
+  const avatar = imageUrl(user?.avatar_url ?? user?.avatar ?? user?.profile_image);
+  const displayName = text(user?.full_name ?? user?.name, text(user?.email, "User profile"));
 
   return (
     <header className="w-full bg-[#FEFEFE] border-b border-gray-100 py-4 px-6 md:px-12 flex justify-between items-center relative z-20 font-sans">
@@ -111,9 +117,11 @@ export default function Header({ activeTab = "offer", onTabChange }: HeaderProps
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
           {/* Notification Badge */}
-          <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#3E3EDF] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
-            20
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-[#3E3EDF] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Profile Avatar button */}
@@ -124,8 +132,8 @@ export default function Header({ activeTab = "offer", onTabChange }: HeaderProps
             className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 hover:border-[#3E3EDF] active:scale-[0.95] transition-all cursor-pointer block focus:outline-none"
           >
             <Image
-              src="/homepage/cardImage.png"
-              alt="User profile"
+              src={avatar}
+              alt={displayName}
               width={40}
               height={40}
               className="object-cover w-full h-full"
