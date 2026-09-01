@@ -148,7 +148,7 @@ export default function Footer({ onTabChange }: FooterProps) {
                     src="/homepage/location.svg"
                     alt="Location"
                     width={18}
-                    height={18}
+                    height={22}
                     className="w-[18px] h-[22px] object-contain"
                   />
                 </span>
@@ -183,7 +183,7 @@ export default function Footer({ onTabChange }: FooterProps) {
                     src="/homepage/email.svg"
                     alt="Email"
                     width={18}
-                    height={18}
+                    height={17}
                     className="w-[18px] h-[17px] object-contain"
                   />
                 </span>

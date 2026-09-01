@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "./Header";
 import SearchBar from "./SearchBar";
 import WalletCard from "./WalletCard";
@@ -21,9 +21,12 @@ export default function HomepageContainer({
   onViewOffer,
   onTabChange,
 }: HomepageContainerProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
   const {
     wallet,
     offers,
+    offerPagination,
     categories,
     reservations,
     reviewOpportunities,
@@ -40,6 +43,9 @@ export default function HomepageContainer({
   }, [loadHome, loadRewardsHub]);
 
   const balance = Number(wallet?.available ?? wallet?.balance ?? 0);
+  const loadOfferPage = (page: number) => {
+    void loadHome(searchQuery, activeCategory, page);
+  };
 
   return (
     <div className="w-full bg-[#FEFEFE] min-h-screen flex flex-col font-sans select-none">
@@ -50,7 +56,12 @@ export default function HomepageContainer({
       <main className="flex-grow flex flex-col gap-10 md:gap-12 py-10 px-4 sm:px-8 max-w-[1440px] mx-auto w-full">
         {/* Search Bar section (Frame 2147229121: top: 135px) */}
         <section className="w-full flex justify-center">
-          <SearchBar onSearch={(query) => void loadHome(query)} />
+          <SearchBar
+            onSearch={(query) => {
+              setSearchQuery(query);
+              void loadHome(query, activeCategory, 1);
+            }}
+          />
         </section>
 
         {/* Wallet Balance Card (Frame 2147229286: top: 317px) */}
@@ -65,7 +76,12 @@ export default function HomepageContainer({
             categories={categories}
             isLoading={status === "loading" && !offers.length}
             error={error}
-            onCategoryChange={(category) => void loadHome(undefined, category)}
+            pagination={offerPagination}
+            onCategoryChange={(category) => {
+              setActiveCategory(category);
+              void loadHome(searchQuery, category, 1);
+            }}
+            onPageChange={loadOfferPage}
             onClaimOffer={onClaimOffer}
             onViewOffer={onViewOffer}
           />
@@ -76,7 +92,9 @@ export default function HomepageContainer({
           <PendingRewards
             reservations={reservations}
             reviewOpportunities={reviewOpportunities}
-            onUploadReceiptClick={() => onTabChange("scan")}
+            onUploadReceiptClick={(reservationId) =>
+              onTabChange("scan", reservationId ? `reservation:${reservationId}` : undefined)
+            }
             onLeaveReviewClick={(itemName) => onTabChange("scan", itemName)}
           />
         </section>

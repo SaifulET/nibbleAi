@@ -730,7 +730,7 @@ export const nibblApi = {
   logout: (refresh: string) =>
     requestEndpoint<null>(backendApi.auth.logout, { refresh }),
   me: () => requestEndpoint<ApiRecord>(backendApi.users.me),
-  updateMe: (body: ApiRecord) =>
+  updateMe: (body: ApiRecord | FormData) =>
     requestEndpoint<ApiRecord>(backendApi.users.updateMe, body),
   changePassword: (body: { current_password: string; new_password: string }) =>
     requestEndpoint<ApiRecord>(backendApi.users.changePassword, body),

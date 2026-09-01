@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { imageUrl } from "../lib/offerMappers";
 
 interface PendingRewardsProps {
   reservations?: Record<string, unknown>[];
   reviewOpportunities?: Record<string, unknown>[];
-  onUploadReceiptClick?: () => void;
+  onUploadReceiptClick?: (reservationId: string) => void;
   onLeaveReviewClick?: (itemName: string) => void;
 }
 
@@ -17,6 +18,18 @@ export default function PendingRewards({
 }: PendingRewardsProps) {
   const pendingReservation = reservations[0];
   const reviewOpportunity = reviewOpportunities[0];
+  const pendingImage = imageUrl(
+    pendingReservation?.product_image ||
+      pendingReservation?.image ||
+      pendingReservation?.campaign_image,
+    ""
+  );
+  const reviewImage = imageUrl(
+    reviewOpportunity?.product_image ||
+      reviewOpportunity?.image ||
+      reviewOpportunity?.campaign_image,
+    ""
+  );
 
   return (
     <div className="w-full max-w-[1137px] mx-auto font-sans flex flex-col gap-6">
@@ -31,13 +44,19 @@ export default function PendingRewards({
         <div className="w-full max-w-[364px] h-[156px] bg-[#FEFEFE] shadow-[0px_2px_7.6px_rgba(0,0,0,0.12)] rounded-lg p-2 pl-3 flex gap-[12px] items-center border border-gray-50 flex-shrink-0">
           {/* Image (Rectangle 34628225) */}
           <div className="w-[100px] h-[111px] bg-gray-50 rounded-lg overflow-hidden relative flex-shrink-0">
-            <Image
-              src="/homepage/rewardImage.svg"
-              alt={String(pendingReservation.product_name || "Pending reward")}
-              fill
-              sizes="100px"
-              className="object-cover"
-            />
+            {pendingImage ? (
+              <Image
+                src={pendingImage}
+                alt={String(pendingReservation.product_name || "Pending reward")}
+                fill
+                sizes="100px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center px-2 text-center text-[10px] text-gray-400">
+                No image returned
+              </div>
+            )}
           </div>
 
           {/* Details (Frame 2147228498) */}
@@ -72,7 +91,7 @@ export default function PendingRewards({
 
             {/* CTA Button (CTA Large) */}
             <button
-              onClick={onUploadReceiptClick}
+              onClick={() => onUploadReceiptClick?.(String(pendingReservation.id || ""))}
               className="w-full max-w-[220px] h-[34px] bg-gradient-to-b from-[#3E3EDF] to-[#3E3EDF] hover:opacity-90 active:scale-[0.98] text-[#FEFEFE] text-[18px] font-medium leading-[22px] rounded-lg shadow-[0_4px_4px_rgba(0,0,0,0.12),inset_0_4px_4px_rgba(255,255,255,0.12)] flex items-center justify-center cursor-pointer focus:outline-none min-w-0"
             >
               Upload Receipt
@@ -85,13 +104,19 @@ export default function PendingRewards({
         <div className="w-full max-w-[364px] h-[153px] bg-[#FEFEFE] shadow-[0px_2px_7.6px_rgba(0,0,0,0.12)] rounded-lg p-2 pl-3 flex gap-[12px] items-center border border-gray-50 flex-shrink-0">
           {/* Image */}
           <div className="w-[100px] h-[111px] bg-gray-50 rounded-lg overflow-hidden relative flex-shrink-0">
-            <Image
-              src="/homepage/rewardImage.svg"
-              alt={String(reviewOpportunity.product_name || "Review opportunity")}
-              fill
-              sizes="100px"
-              className="object-cover"
-            />
+            {reviewImage ? (
+              <Image
+                src={reviewImage}
+                alt={String(reviewOpportunity.product_name || "Review opportunity")}
+                fill
+                sizes="100px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center px-2 text-center text-[10px] text-gray-400">
+                No image returned
+              </div>
+            )}
           </div>
 
           {/* Details (Frame 2147228499) */}

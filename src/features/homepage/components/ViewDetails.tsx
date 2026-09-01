@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import UserAvatar from "@/components/UserAvatar";
 import Header from "./Header";
 import Footer from "./Footer";
 import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
@@ -126,15 +126,12 @@ export default function ViewDetails({ campaignId, onBack, onTabChange }: ViewDet
                 <div key={review.id} className="w-full flex flex-col gap-2 relative">
                   <div className="w-full flex justify-between items-start">
                     <div className="flex gap-3 items-center">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200">
-                        <Image
-                          src={review.avatar}
-                          alt={review.author}
-                          width={40}
-                          height={40}
-                          className="object-cover"
-                        />
-                      </div>
+                      <UserAvatar
+                        src={review.avatar}
+                        alt={review.author}
+                        className="h-10 w-10 border border-gray-200"
+                        iconClassName="h-5 w-5"
+                      />
                       <div className="flex flex-col">
                         <span className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
                           {review.author}

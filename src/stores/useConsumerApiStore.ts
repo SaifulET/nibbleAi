@@ -13,6 +13,14 @@ import {
 
 export type LoadState = "idle" | "loading" | "success" | "error";
 
+export interface PaginationState {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  page: number;
+  pageSize: number;
+}
+
 export interface ConsumerApiState {
   accessToken: string | null;
   refreshToken: string | null;
@@ -20,6 +28,7 @@ export interface ConsumerApiState {
   user: ApiRecord | null;
   wallet: ApiRecord | null;
   offers: ApiRecord[];
+  offerPagination: PaginationState;
   selectedOffer: ApiRecord | null;
   savedOffers: ApiRecord[];
   categories: string[];
@@ -44,14 +53,15 @@ export interface ConsumerApiState {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (code: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
+  validateSession: () => Promise<boolean>;
   loadProfile: () => Promise<void>;
-  loadHome: (search?: string, category?: string) => Promise<void>;
+  loadHome: (search?: string, category?: string, page?: number) => Promise<void>;
   loadOfferDetails: (campaignId: string) => Promise<void>;
   loadSavedOffers: () => Promise<void>;
   loadRewardsHub: () => Promise<void>;
   loadWallet: () => Promise<void>;
   loadNotifications: () => Promise<void>;
-  updateProfile: (body: ApiRecord) => Promise<void>;
+  updateProfile: (body: ApiRecord | FormData) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   saveOffer: (campaignId: string) => Promise<ApiRecord>;
   claimOffer: (campaignId: string) => Promise<ApiRecord>;
@@ -75,8 +85,37 @@ const listResults = (response: unknown): ApiRecord[] => {
   return [];
 };
 
+const paginationMeta = (response: unknown, page: number): PaginationState => {
+  if (response && typeof response === "object" && !Array.isArray(response)) {
+    const record = response as {
+      count?: unknown;
+      next?: unknown;
+      previous?: unknown;
+      results?: unknown;
+    };
+
+    return {
+      count: Number(record.count ?? 0),
+      next: typeof record.next === "string" ? record.next : null,
+      previous: typeof record.previous === "string" ? record.previous : null,
+      page,
+      pageSize: OFFER_PAGE_SIZE,
+    };
+  }
+
+  return {
+    count: Array.isArray(response) ? response.length : 0,
+    next: null,
+    previous: null,
+    page,
+    pageSize: Array.isArray(response) && response.length ? response.length : OFFER_PAGE_SIZE,
+  };
+};
+
 const readError = (error: unknown) =>
   error instanceof ApiError ? error.message : "Something went wrong.";
+
+const OFFER_PAGE_SIZE = 20;
 
 export const useConsumerApiStore = create<ConsumerApiState>()(
   persist(
@@ -87,6 +126,13 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
       user: null,
       wallet: null,
       offers: [],
+      offerPagination: {
+        count: 0,
+        next: null,
+        previous: null,
+        page: 1,
+        pageSize: OFFER_PAGE_SIZE,
+      },
       selectedOffer: null,
       savedOffers: [],
       categories: [],
@@ -114,6 +160,13 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           user: null,
           wallet: null,
           offers: [],
+          offerPagination: {
+            count: 0,
+            next: null,
+            previous: null,
+            page: 1,
+            pageSize: OFFER_PAGE_SIZE,
+          },
           selectedOffer: null,
           savedOffers: [],
           reservations: [],
@@ -204,6 +257,22 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           get().clearAuth();
         }
       },
+      validateSession: async () => {
+        set({ status: "loading", error: null });
+        try {
+          const user = await nibblApi.me();
+          set({ user, status: "success" });
+          return true;
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            get().clearAuth();
+            return false;
+          }
+
+          set({ status: "error", error: readError(error) });
+          return true;
+        }
+      },
       loadProfile: async () => {
         set({ status: "loading", error: null });
         try {
@@ -213,15 +282,24 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           ]);
           set({ user, notificationPreferences, status: "success" });
         } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            get().clearAuth();
+            return;
+          }
+
           set({ status: "error", error: readError(error) });
         }
       },
-      loadHome: async (search, category) => {
+      loadHome: async (search, category, page = 1) => {
         set({ status: "loading", error: null });
         try {
           const [wallet, offers, categories, unread, config] = await Promise.all([
             nibblApi.wallet(),
-            nibblApi.offers({ page: 1, search, category: category === "All" ? undefined : category }),
+            nibblApi.offers({
+              page,
+              search,
+              category: category === "All" ? undefined : category,
+            }),
             nibblApi.offerCategories(),
             nibblApi.unreadCount(),
             nibblApi.config(),
@@ -229,12 +307,21 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           set({
             wallet,
             offers: listResults(offers),
+            offerPagination: paginationMeta(offers, page),
             categories: ["All", ...categories.map((item) => String(item.category || "")).filter(Boolean)],
             unreadCount: Number(unread.unread_count || 0),
             config,
             status: "success",
           });
         } catch (error) {
+          if (
+            page > 1 &&
+            error instanceof ApiError &&
+            error.message.toLowerCase().includes("invalid page")
+          ) {
+            await get().loadHome(search, category, 1);
+            return;
+          }
           set({ status: "error", error: readError(error) });
         }
       },
@@ -374,6 +461,9 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
         return payoutMethod;
       },
       requestWithdrawal: async (payoutMethodId, amount) => {
+        if (Number(amount) < 0.01) {
+          throw new Error("You need at least $0.01 available before requesting a withdrawal.");
+        }
         const withdrawal = await nibblApi.createWithdrawal({
           payout_method: payoutMethodId,
           amount,
@@ -396,6 +486,7 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         pendingEmail: state.pendingEmail,
+        user: state.user,
       }),
     }
   )

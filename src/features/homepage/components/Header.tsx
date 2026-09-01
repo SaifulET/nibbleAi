@@ -2,19 +2,20 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import UserAvatar from "@/components/UserAvatar";
 import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
 import { imageUrl, text } from "../lib/offerMappers";
 
 interface HeaderProps {
-  activeTab?: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification";
-  onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification") => void;
+  activeTab?: "offer" | "wallet" | "scan" | "profile" | "notification";
+  onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "notification") => void;
   unreadCount?: number;
 }
 
 export default function Header({ activeTab = "offer", onTabChange, unreadCount = 0 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const user = useConsumerApiStore((state) => state.user);
-  const avatar = imageUrl(user?.avatar_url ?? user?.avatar ?? user?.profile_image);
+  const avatar = imageUrl(user?.avatar_url ?? user?.avatar ?? user?.profile_image, "");
   const displayName = text(user?.full_name ?? user?.name, text(user?.email, "User profile"));
 
   return (
@@ -91,16 +92,6 @@ export default function Header({ activeTab = "offer", onTabChange, unreadCount =
           >
             Profile
           </button>
-          <button
-            onClick={() => onTabChange?.("brand")}
-            className={`px-5 py-1.5 font-medium text-sm rounded-md transition-all cursor-pointer focus:outline-none ${
-              activeTab === "brand"
-                ? "text-white bg-[#3E3EDF] shadow-sm hover:opacity-90 active:scale-[0.98]"
-                : "text-[#575757] hover:text-black"
-            }`}
-          >
-            Brand
-          </button>
         </nav>
       </div>
 
@@ -131,12 +122,12 @@ export default function Header({ activeTab = "offer", onTabChange, unreadCount =
             title="View Profile"
             className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 hover:border-[#3E3EDF] active:scale-[0.95] transition-all cursor-pointer block focus:outline-none"
           >
-            <Image
+            <UserAvatar
               src={avatar}
               alt={displayName}
-              width={40}
-              height={40}
-              className="object-cover w-full h-full"
+              className="h-full w-full"
+              iconClassName="h-5 w-5"
+              priority
             />
           </button>
         </div>
@@ -188,17 +179,6 @@ export default function Header({ activeTab = "offer", onTabChange, unreadCount =
             }`}
           >
             Profile
-          </button>
-          <button
-            onClick={() => {
-              onTabChange?.("brand");
-              setIsMenuOpen(false);
-            }}
-            className={`w-full text-left py-2 font-medium text-base transition-colors focus:outline-none cursor-pointer ${
-              activeTab === "brand" ? "text-[#3E3EDF]" : "text-[#575757]"
-            }`}
-          >
-            Brand
           </button>
         </div>
       )}

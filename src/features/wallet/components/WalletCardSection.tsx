@@ -5,10 +5,16 @@ import Image from "next/image";
 interface WalletCardSectionProps {
   balance: number;
   onWithdrawClick: () => void;
+  withdrawDisabled?: boolean;
   onHistoryClick?: () => void;
 }
 
-export default function WalletCardSection({ balance, onWithdrawClick, onHistoryClick }: WalletCardSectionProps) {
+export default function WalletCardSection({
+  balance,
+  onWithdrawClick,
+  withdrawDisabled = false,
+  onHistoryClick,
+}: WalletCardSectionProps) {
   return (
     <div className="w-full max-w-[1165px] bg-[#7676FF] shadow-[1px_8px_25.2px_rgba(0,0,0,0.25)] rounded-[14px] px-6 py-8 sm:py-[37px] sm:px-[50px] flex flex-col justify-center items-start text-white border border-indigo-400/30">
       <div className="w-full flex flex-col gap-8 md:gap-[47px]">
@@ -53,7 +59,8 @@ export default function WalletCardSection({ balance, onWithdrawClick, onHistoryC
           {/* Withdraw (Frame 2147229086) */}
           <button
             onClick={onWithdrawClick}
-            className="flex-1 max-w-full sm:max-w-[520px] h-[49px] bg-[#FEFEFE] hover:bg-gray-50 active:scale-[0.99] text-[#1F1D1D] rounded-[12px] flex items-center justify-center gap-2.5 transition-all cursor-pointer focus:outline-none shadow-sm"
+            disabled={withdrawDisabled}
+            className="flex-1 max-w-full sm:max-w-[520px] h-[49px] bg-[#FEFEFE] hover:bg-gray-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 text-[#1F1D1D] rounded-[12px] flex items-center justify-center gap-2.5 transition-all cursor-pointer focus:outline-none shadow-sm"
           >
             <div className="w-6 h-6 relative flex items-center justify-center">
               <Image

@@ -21,7 +21,7 @@ export interface DisplayReview {
   rating: number;
   body: string;
   date: string;
-  avatar: string;
+  avatar: string | null;
 }
 
 const fallbackImage = "/homepage/rewardImage.svg";
@@ -87,7 +87,7 @@ export const displayReviews = (offer?: ApiRecord | null): DisplayReview[] => {
       rating: Number(item.rating ?? 0),
       body: text(item.content ?? item.body ?? item.comment, "No review text was provided."),
       date: dateOnly(item.created_at ?? item.updated_at, "Recent"),
-      avatar: imageUrl(user.avatar ?? user.avatar_url ?? item.avatar),
+      avatar: imageUrl(user.avatar ?? user.avatar_url ?? item.avatar, "") || null,
     };
   });
 };

@@ -18,61 +18,186 @@ import MyRewardContainer from "@/features/myreward/components/MyRewardContainer"
 import WalletContainer from "@/features/wallet/components/WalletContainer";
 import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
 
+type ProfileInitialView =
+  | "menu"
+  | "notifications"
+  | "privacy"
+  | "terms"
+  | "faq"
+  | "help";
+
+const ROUTE_STORAGE_KEY = "nibbl_current_route";
+const CAMPAIGN_STORAGE_KEY = "nibbl_selected_campaign_id";
+const PROFILE_VIEW_STORAGE_KEY = "nibbl_profile_view";
+
+const authenticatedStages = new Set<AuthStage>([
+  "home",
+  "claim-details",
+  "view-details",
+  "profile",
+  "my-reward",
+  "wallet",
+]);
+
+const profileViews = new Set<ProfileInitialView>([
+  "menu",
+  "notifications",
+  "privacy",
+  "terms",
+  "faq",
+  "help",
+]);
+
+const storageAvailable = () => typeof window !== "undefined";
+
+const hasStoredAccessToken = () =>
+  storageAvailable() && Boolean(window.localStorage.getItem("nibbl_access"));
+
+const readStoredStage = (): AuthStage => {
+  if (!hasStoredAccessToken()) return "splash";
+
+  const storedStage = window.localStorage.getItem(ROUTE_STORAGE_KEY) as AuthStage | null;
+  if (!storedStage || !authenticatedStages.has(storedStage)) return "home";
+
+  const needsCampaign = storedStage === "claim-details" || storedStage === "view-details";
+  if (needsCampaign && !window.localStorage.getItem(CAMPAIGN_STORAGE_KEY)) return "home";
+
+  return storedStage;
+};
+
+const readStoredCampaignId = () => {
+  if (!storageAvailable()) return "";
+  return window.localStorage.getItem(CAMPAIGN_STORAGE_KEY) || "";
+};
+
+const readStoredProfileView = (): ProfileInitialView => {
+  if (!storageAvailable()) return "menu";
+
+  const storedView = window.localStorage.getItem(PROFILE_VIEW_STORAGE_KEY) as ProfileInitialView | null;
+  return storedView && profileViews.has(storedView) ? storedView : "menu";
+};
+
+const clearStoredNavigation = () => {
+  if (!storageAvailable()) return;
+  window.localStorage.removeItem(ROUTE_STORAGE_KEY);
+  window.localStorage.removeItem(CAMPAIGN_STORAGE_KEY);
+  window.localStorage.removeItem(PROFILE_VIEW_STORAGE_KEY);
+};
+
 export default function AuthContainer() {
   const [stage, setStage] = useState<AuthStage>("splash");
-  const [profileInitialView, setProfileInitialView] = useState<"menu" | "notifications" | "privacy" | "terms" | "faq" | "help">("menu");
+  const [profileInitialView, setProfileInitialView] = useState<ProfileInitialView>("menu");
+  const [hasRestoredNavigation, setHasRestoredNavigation] = useState(false);
 
   const [autoOpenReviewItem, setAutoOpenReviewItem] = useState<string | null>(null);
+  const [autoUploadReservationId, setAutoUploadReservationId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [authFlow, setAuthFlow] = useState<"signup" | "password-reset" | null>(null);
   const [passwordResetCode, setPasswordResetCode] = useState("");
   const {
+    accessToken,
     login,
     register,
     forgotPassword,
     resetPassword,
     verifyEmail,
     logout,
+    validateSession,
     loadOfferDetails,
     error,
   } = useConsumerApiStore();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    const timer = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab) {
-        const timer = setTimeout(() => {
-          if (tab === "offer" || tab === "brand") {
-            setStage("home");
-          } else if (tab === "wallet") {
-            setStage("wallet");
-          } else if (tab === "scan") {
-            setStage("my-reward");
-          } else if (tab === "profile") {
-            setProfileInitialView("menu");
-            setStage("profile");
-          } else if (tab === "notification") {
-            setProfileInitialView("notifications");
-            setStage("profile");
-          } else if (tab === "privacy" || tab === "terms" || tab === "faq") {
-            setProfileInitialView(tab);
-            setStage("profile");
-          }
-        }, 0);
-        return () => clearTimeout(timer);
+
+      if (tab === "offer" || tab === "brand") {
+        setStage("home");
+      } else if (tab === "wallet") {
+        setStage("wallet");
+      } else if (tab === "scan") {
+        setStage("my-reward");
+      } else if (tab === "profile") {
+        setProfileInitialView("menu");
+        setStage("profile");
+      } else if (tab === "notification") {
+        setProfileInitialView("notifications");
+        setStage("profile");
+      } else if (tab === "privacy" || tab === "terms" || tab === "faq") {
+        setProfileInitialView(tab);
+        setStage("profile");
+      } else {
+        setSelectedCampaignId(readStoredCampaignId());
+        setProfileInitialView(readStoredProfileView());
+        setStage(readStoredStage());
       }
-    }
+
+      setHasRestoredNavigation(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!hasRestoredNavigation || !accessToken) return;
+
+    let cancelled = false;
+    void validateSession().then((isValid) => {
+      if (cancelled || isValid) return;
+      clearStoredNavigation();
+      setStage("signin");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, hasRestoredNavigation, validateSession]);
+
+  useEffect(() => {
+    if (!hasRestoredNavigation || accessToken || !authenticatedStages.has(stage)) return;
+    clearStoredNavigation();
+
+    const timer = window.setTimeout(() => {
+      setStage("signin");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [accessToken, hasRestoredNavigation, stage]);
+
+  useEffect(() => {
+    if (!accessToken || !authenticatedStages.has(stage) || !storageAvailable()) return;
+    window.localStorage.setItem(ROUTE_STORAGE_KEY, stage);
+  }, [accessToken, stage]);
+
+  useEffect(() => {
+    if (!storageAvailable()) return;
+
+    if (selectedCampaignId) {
+      window.localStorage.setItem(CAMPAIGN_STORAGE_KEY, selectedCampaignId);
+    } else {
+      window.localStorage.removeItem(CAMPAIGN_STORAGE_KEY);
+    }
+  }, [selectedCampaignId]);
+
+  useEffect(() => {
+    if (!accessToken || !storageAvailable()) return;
+    window.localStorage.setItem(PROFILE_VIEW_STORAGE_KEY, profileInitialView);
+  }, [accessToken, profileInitialView]);
 
   const handleTabChange = (
     tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification",
     extra?: string
   ) => {
-    if (extra) {
+    if (tab === "scan" && extra?.startsWith("reservation:")) {
+      setAutoUploadReservationId(extra.replace("reservation:", ""));
+      setAutoOpenReviewItem(null);
+    } else if (extra) {
       setAutoOpenReviewItem(extra);
+      setAutoUploadReservationId(null);
     } else {
       setAutoOpenReviewItem(null);
+      setAutoUploadReservationId(null);
     }
 
     if (tab === "offer" || tab === "brand") {
@@ -95,13 +220,14 @@ export default function AuthContainer() {
   };
 
   const handleSplashComplete = () => {
-    setStage("onboarding");
+    setStage(accessToken ? "home" : "onboarding");
   };
 
   const handleSignInSubmit = async (data: SignInCredentials) => {
     if (!data.password) return;
     try {
       await login(data.email, data.password, data.rememberMe);
+      if (storageAvailable()) window.localStorage.setItem(ROUTE_STORAGE_KEY, "home");
       setStage("home");
     } catch {
       // Store keeps the displayable error.
@@ -154,6 +280,10 @@ export default function AuthContainer() {
       // Store keeps the displayable error.
     }
   };
+
+  if (!hasRestoredNavigation) {
+    return <div className="min-h-screen bg-white" />;
+  }
 
   // Render Splash Screen directly
   if (stage === "splash") {
@@ -225,6 +355,7 @@ export default function AuthContainer() {
           initialView={profileInitialView}
           onBack={() => setStage("home")}
           onSignOut={() => {
+            clearStoredNavigation();
             void logout();
             setStage("onboarding");
           }}
@@ -247,7 +378,9 @@ export default function AuthContainer() {
         <MyRewardContainer
           onTabChange={handleTabChange}
           autoOpenReviewItem={autoOpenReviewItem}
+          autoUploadReservationId={autoUploadReservationId}
           onClearAutoOpenReview={() => setAutoOpenReviewItem(null)}
+          onClearAutoUploadReservation={() => setAutoUploadReservationId(null)}
         />
       </div>
     );

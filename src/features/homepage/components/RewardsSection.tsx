@@ -22,7 +22,15 @@ interface RewardsSectionProps {
   categories?: string[];
   isLoading?: boolean;
   error?: string | null;
+  pagination?: {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    page: number;
+    pageSize: number;
+  };
   onCategoryChange?: (category: string) => void;
+  onPageChange?: (page: number) => void;
   onClaimOffer?: (campaignId?: string) => void;
   onViewOffer?: (campaignId?: string) => void;
 }
@@ -51,15 +59,25 @@ export default function RewardsSection({
   categories: categoryOptions,
   isLoading = false,
   error,
+  pagination,
   onCategoryChange,
+  onPageChange,
   onClaimOffer,
   onViewOffer,
 }: RewardsSectionProps) {
   const [activeFilter, setActiveFilter] = useState<string>("All");
-  const [currentPage, setCurrentPage] = useState<number>(12); // Default active page 12 in figma description
 
   const categories = categoryOptions?.length ? categoryOptions : ["All"];
   const sourceOffers = (offers || []).map(mapOffer);
+  const currentPage = pagination?.page || 1;
+  const pageSize = pagination?.pageSize || Math.max(sourceOffers.length, 1);
+  const totalItems = pagination?.count || sourceOffers.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const canGoBack = Boolean(pagination?.previous) || currentPage > 1;
+  const canGoNext = Boolean(pagination?.next) || currentPage < totalPages;
+  const pages = Array.from(new Set([1, currentPage, totalPages]))
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
 
   const filteredOffers = activeFilter === "All"
     ? sourceOffers
@@ -167,11 +185,11 @@ export default function RewardsSection({
           No rewards found from the backend.
         </div>
       ) : (
-        <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-between gap-6 w-full">
+        <div className="grid w-full grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {filteredOffers.map((offer) => (
             <div
               key={offer.id}
-              className="w-full sm:max-w-[335px] h-[320px] bg-[#FFFFFF] shadow-[0px_2px_4px_rgba(0,0,0,0.12)] rounded-[14px] flex flex-col relative overflow-hidden flex-shrink-0"
+              className="w-full max-w-[335px] h-[320px] bg-[#FFFFFF] shadow-[0px_2px_4px_rgba(0,0,0,0.12)] rounded-[14px] flex flex-col relative overflow-hidden"
             >
               {/* Product Image Section (Mask group + Rectangle 34628211) */}
               <div className="w-full h-[180px] bg-[#D9D9D9] rounded-t-[10px] relative overflow-hidden flex-shrink-0">
@@ -259,66 +277,60 @@ export default function RewardsSection({
       )}
 
       {/* Pagination Controls */}
+      {totalItems > pageSize && (
       <div className="flex justify-center mt-6">
         <div className="flex items-center gap-[23px] select-none">
-          {/* Example wrapper with 306px width constraint */}
-          <div className="w-[306px] h-[36px] flex items-center gap-4">
-            
-            {/* Back button */}
+          <div className="min-h-[36px] flex items-center gap-4">
             <button
-              onClick={() => setCurrentPage(1)}
+              onClick={() => {
+                if (canGoBack) onPageChange?.(currentPage - 1);
+              }}
+              disabled={!canGoBack}
               className={`w-[78px] h-[36px] border rounded-[4px] flex items-center justify-center gap-1 text-[14px] font-normal leading-[21px] font-poppins cursor-pointer focus:outline-none transition-all ${
-                currentPage === 1
-                  ? "bg-[#3E3EDF] text-white border-[#3E3EDF]"
-                  : "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
+                canGoBack
+                  ? "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
+                  : "bg-[#F5F5F5] border-[#E0E0E0] text-[#A0A0A0] cursor-not-allowed"
               }`}
             >
-              <svg className={`w-4 h-4 transform -rotate-90 ${currentPage === 1 ? 'text-white' : 'text-[#1F1D1D]'}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
               Back
             </button>
 
-            {/* Page number 1 */}
-            <button
-              onClick={() => setCurrentPage(1)}
-              className={`w-[29px] h-[37px] border rounded-[4px] flex items-center justify-center text-[14px] font-normal leading-[21px] font-poppins cursor-pointer focus:outline-none transition-all ${
-                currentPage === 1
-                  ? "bg-[#3E3EDF] text-white border-[#3E3EDF]"
-                  : "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
-              }`}
-            >
-              1
-            </button>
+            {pages.map((page, index) => (
+              <div key={page} className="flex items-center gap-4">
+                {index > 0 && page - pages[index - 1] > 1 && (
+                  <div className="w-[31px] h-[36px] bg-[#FFFFFF] border border-[#FEFEFE] shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-[4px] flex items-center justify-center text-[14px] font-normal text-[#1F1D1D] font-poppins">
+                    ...
+                  </div>
+                )}
+                <button
+                  onClick={() => onPageChange?.(page)}
+                  className={`min-w-[29px] px-2 h-[37px] border rounded-[4px] flex items-center justify-center text-[14px] font-normal leading-[21px] font-poppins cursor-pointer focus:outline-none transition-all ${
+                    currentPage === page
+                      ? "bg-[#3E3EDF] text-white border-[#3E3EDF]"
+                      : "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
+                  }`}
+                >
+                  {page}
+                </button>
+              </div>
+            ))}
 
-            {/* Ellipsis symbol */}
-            <div className="w-[31px] h-[36px] bg-[#FFFFFF] border border-[#FEFEFE] shadow-[0px_2px_8px_rgba(0,0,0,0.1)] rounded-[4px] flex items-center justify-center text-[14px] font-normal text-[#1F1D1D] font-poppins">
-              ...
-            </div>
-
-            {/* Active Page 12 */}
             <button
-              onClick={() => setCurrentPage(12)}
-              className={`w-[29px] h-[37px] border rounded-[4px] flex items-center justify-center text-[14px] font-normal leading-[21px] font-poppins cursor-pointer focus:outline-none transition-all ${
-                currentPage === 12
-                  ? "bg-[#3E3EDF] text-white border-[#3E3EDF]"
-                  : "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
-              }`}
-            >
-              12
-            </button>
-
-            {/* Next button */}
-            <button
-              onClick={() => setCurrentPage(12)}
+              onClick={() => {
+                if (canGoNext) onPageChange?.(currentPage + 1);
+              }}
+              disabled={!canGoNext}
               className={`w-[75px] h-[36px] border rounded-[4px] flex items-center justify-center gap-1 text-[14px] font-normal leading-[21px] font-poppins cursor-pointer focus:outline-none transition-all ${
-                currentPage === 12
-                  ? "bg-[#3E3EDF] text-white border-[#3E3EDF]"
-                  : "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
+                canGoNext
+                  ? "bg-[#FFFFFF] border-[#FEFEFE] hover:bg-gray-50 shadow-[0px_2px_8px_rgba(0,0,0,0.1)] text-[#1F1D1D]"
+                  : "bg-[#F5F5F5] border-[#E0E0E0] text-[#A0A0A0] cursor-not-allowed"
               }`}
             >
               Next
-              <svg className={`w-4 h-4 transform rotate-90 ${currentPage === 12 ? 'text-white' : 'text-[#1F1D1D]'}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 transform -rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -326,6 +338,7 @@ export default function RewardsSection({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

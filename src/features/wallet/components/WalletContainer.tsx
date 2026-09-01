@@ -16,6 +16,7 @@ interface WalletContainerProps {
 export default function WalletContainer({ onTabChange }: WalletContainerProps) {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [walletMessage, setWalletMessage] = useState<string | null>(null);
   const { wallet, redemptions, unreadCount, loadWallet, createPayoutMethod, requestWithdrawal } = useConsumerApiStore();
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function WalletContainer({ onTabChange }: WalletContainerProps) {
   }, [loadWallet]);
 
   const available = Number(wallet?.available ?? wallet?.balance ?? 0);
+  const canWithdraw = available >= 0.01;
 
   return (
     <div className="w-full bg-[#FEFEFE] min-h-screen flex flex-col font-sans select-none">
@@ -31,12 +33,25 @@ export default function WalletContainer({ onTabChange }: WalletContainerProps) {
       <main className="flex-grow flex flex-col items-center py-10 px-4 sm:px-6 max-w-[1440px] mx-auto w-full gap-8">
         <WalletCardSection
           balance={available}
-          onWithdrawClick={() => setIsWithdrawModalOpen(true)}
+          withdrawDisabled={!canWithdraw}
+          onWithdrawClick={() => {
+            if (!canWithdraw) {
+              setWalletMessage("You need at least $0.01 available before requesting a withdrawal.");
+              return;
+            }
+            setWalletMessage(null);
+            setIsWithdrawModalOpen(true);
+          }}
           onHistoryClick={() => {
             const el = document.getElementById("wallet-history-section");
             el?.scrollIntoView({ behavior: "smooth" });
           }}
         />
+        {walletMessage && (
+          <p className="text-sm font-medium text-[#E65353]">
+            {walletMessage}
+          </p>
+        )}
         
         <div id="wallet-history-section" className="w-full flex justify-center mt-2">
           <RecentRewardsCard redemptions={redemptions} />
@@ -61,8 +76,16 @@ export default function WalletContainer({ onTabChange }: WalletContainerProps) {
           onClose={() => setIsBankModalOpen(false)}
           onSubmit={(details) => {
             setIsBankModalOpen(false);
+            if (!canWithdraw) {
+              setWalletMessage("You need at least $0.01 available before requesting a withdrawal.");
+              return;
+            }
             void createPayoutMethod("paypal", details.accountNumber || details.accountName)
-              .then((method) => requestWithdrawal(String(method.id), String(available)));
+              .then((method) => requestWithdrawal(String(method.id), available.toFixed(2)))
+              .then(() => setWalletMessage("Withdrawal request submitted."))
+              .catch((error: unknown) => {
+                setWalletMessage(error instanceof Error ? error.message : "Withdrawal request failed.");
+              });
           }}
         />
       )}

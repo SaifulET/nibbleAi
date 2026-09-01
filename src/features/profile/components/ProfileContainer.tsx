@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import UserAvatar from "@/components/UserAvatar";
 import Header from "../../homepage/components/Header";
 import Footer from "../../homepage/components/Footer";
 import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
@@ -54,13 +55,15 @@ export default function ProfileContainer({
 }: ProfileContainerProps) {
   const [activeView, setActiveView] = useState<ProfileView>(() => viewFromInitial(initialView));
   const [fullName, setFullName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     user,
@@ -96,11 +99,9 @@ export default function ProfileContainer({
 
   useEffect(() => {
     const nextName = text(user?.full_name ?? user?.name, "");
-    const nextAvatar = text(user?.avatar_url ?? user?.avatar ?? user?.profile_image, "");
-    if (!nextName && !nextAvatar) return;
+    if (!nextName) return;
     const timer = window.setTimeout(() => {
-      if (nextName) setFullName(nextName);
-      setAvatarUrl(nextAvatar);
+      setFullName(nextName);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [user]);
@@ -108,15 +109,7 @@ export default function ProfileContainer({
   const displayName = text(user?.full_name ?? user?.name, text(user?.email, "NibblAI user"));
   const email = text(user?.email, "");
   const backendAvatar = text(user?.avatar_url ?? user?.avatar ?? user?.profile_image, "");
-  const editableAvatar = avatarUrl.trim();
-  const avatarPreview =
-    editableAvatar.startsWith("http://") ||
-    editableAvatar.startsWith("https://") ||
-    editableAvatar.startsWith("/media/") ||
-    editableAvatar.startsWith("/")
-      ? editableAvatar
-      : backendAvatar;
-  const avatar = imageUrl(avatarPreview);
+  const avatar = avatarPreviewUrl || imageUrl(backendAvatar, "");
   const notificationsEnabled = Boolean(
     notificationPreferences?.push_enabled ??
       notificationPreferences?.email_enabled ??
@@ -144,14 +137,19 @@ export default function ProfileContainer({
     setSaveMessage(null);
 
     try {
-      const profilePatch: Record<string, string> = {};
-      if (fullName.trim() && fullName.trim() !== displayName) {
-        profilePatch.full_name = fullName.trim();
+      const shouldUpdateName = fullName.trim() && fullName.trim() !== displayName;
+      if (shouldUpdateName || avatarFile) {
+        if (avatarFile) {
+          const form = new FormData();
+          if (shouldUpdateName) form.append("full_name", fullName.trim());
+          form.append("avatar", avatarFile);
+          await updateProfile(form);
+        } else {
+          await updateProfile({ full_name: fullName.trim() });
+        }
+        setAvatarFile(null);
+        setAvatarPreviewUrl("");
       }
-      if (avatarUrl.trim() !== backendAvatar) {
-        profilePatch.avatar_url = avatarUrl.trim();
-      }
-      if (Object.keys(profilePatch).length) await updateProfile(profilePatch);
       if (oldPassword && newPassword) {
         await changePassword(oldPassword, newPassword);
         setOldPassword("");
@@ -162,6 +160,17 @@ export default function ProfileContainer({
     } catch {
       setSaveMessage(null);
     }
+  };
+
+  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setAvatarPreviewUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleNotificationToggle = async () => {
@@ -191,9 +200,14 @@ export default function ProfileContainer({
         {activeView === "menu" && (
           <div className="w-full max-w-[608px] flex flex-col items-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-2">
-              <div className="w-[100px] h-[100px] rounded-full overflow-hidden border border-gray-150 relative">
-                <Image src={avatar} alt={displayName} fill sizes="100px" className="object-cover" />
-              </div>
+              <UserAvatar
+                src={avatar}
+                alt={displayName}
+                className="h-[100px] w-[100px] border border-gray-150"
+                iconClassName="h-12 w-12"
+                sizes="100px"
+                priority
+              />
 
               <div className="flex flex-col items-center">
                 <span className="text-[18px] font-medium leading-[22px] text-[#000000] text-center">
@@ -256,18 +270,33 @@ export default function ProfileContainer({
             </h2>
 
             <form onSubmit={handleSaveChange} className="w-full flex flex-col items-center gap-6">
-              <div className="w-[112px] h-[112px] rounded-full overflow-hidden border border-gray-200 relative">
-                <Image src={avatar} alt={displayName} fill sizes="112px" className="object-cover" />
-              </div>
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="w-[112px] h-[112px] rounded-full overflow-hidden border border-gray-200 relative cursor-pointer hover:ring-2 hover:ring-[#3E3EDF] focus:outline-none focus:ring-2 focus:ring-[#3E3EDF]"
+              >
+                <UserAvatar
+                  src={avatar}
+                  alt={displayName}
+                  className="h-full w-full"
+                  iconClassName="h-12 w-12"
+                  sizes="112px"
+                  priority
+                />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[12px] font-semibold text-white opacity-0 transition-all hover:bg-black/35 hover:opacity-100">
+                  Change
+                </span>
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
 
               <div className="w-full flex flex-col gap-[14px]">
                 <TextField label="Full Name" value={fullName} onChange={setFullName} placeholder="Name" />
-                <TextField
-                  label="Profile Image URL"
-                  value={avatarUrl}
-                  onChange={setAvatarUrl}
-                  placeholder="https://cdn.example.com/profile.png"
-                />
                 <PasswordField
                   label="Old Password"
                   value={oldPassword}

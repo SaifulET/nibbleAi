@@ -16,7 +16,9 @@ import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
 interface MyRewardContainerProps {
   onTabChange: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
   autoOpenReviewItem?: string | null;
+  autoUploadReservationId?: string | null;
   onClearAutoOpenReview?: () => void;
+  onClearAutoUploadReservation?: () => void;
 }
 
 interface Receipt {
@@ -39,9 +41,13 @@ interface Activity {
 export default function MyRewardContainer({
   onTabChange,
   autoOpenReviewItem,
+  autoUploadReservationId,
   onClearAutoOpenReview,
+  onClearAutoUploadReservation,
 }: MyRewardContainerProps) {
   const [activeReviewItem, setActiveReviewItem] = useState<string | null>(null);
+  const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const {
     receipts: apiReceipts,
     activities: apiActivities,
@@ -66,9 +72,22 @@ export default function MyRewardContainer({
       return () => clearTimeout(timer);
     }
   }, [autoOpenReviewItem, onClearAutoOpenReview]);
+
+  useEffect(() => {
+    if (!autoUploadReservationId) return;
+
+    const timer = setTimeout(() => {
+      setSelectedReservationId(autoUploadReservationId);
+      setUploadError(null);
+      document.getElementById("upload-receipt-section")?.scrollIntoView({ behavior: "smooth" });
+      onClearAutoUploadReservation?.();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [autoUploadReservationId, onClearAutoUploadReservation]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   
-  const [localReceipts, setLocalReceipts] = useState<Receipt[]>([]);
+  const [localReceipts] = useState<Receipt[]>([]);
   const [localActivities, setLocalActivities] = useState<Activity[]>([]);
 
   const receipts: Receipt[] = apiReceipts.length
@@ -98,28 +117,19 @@ export default function MyRewardContainer({
     : localActivities;
 
   const handleUploadSuccess = async (file: File) => {
-    const reservationId = String(reservations[0]?.id || "");
-    if (reservationId) {
-      await uploadReceipt(reservationId, file);
+    const reservationId = selectedReservationId || String(reservations[0]?.id || "");
+    if (!reservationId) {
+      setUploadError("Select a pending reward before uploading a receipt.");
       return;
     }
 
-    // Append mock data to receipt list
-    const newReceipt: Receipt = { title: `${file.name.split(".")[0]} Rebate`, date: "Today", status: "Pending" };
-    setLocalReceipts((prev) => [newReceipt, ...prev]);
-
-    // Append mock activity
-    const newActivity: Activity = {
-      id: `act-${Date.now()}`,
-      type: "pending",
-      title: "Receipt Upload Pending Review",
-      subtitle: "Uploaded via file manager- Today",
-      statusText: "Pending",
-      statusColor: "text-[#D7930A]",
-      iconBg: "#FF9400",
-      iconSrc: "/myreward/watch-01.svg",
-    };
-    setLocalActivities((prev) => [newActivity, ...prev]);
+    try {
+      setUploadError(null);
+      await uploadReceipt(reservationId, file);
+      setSelectedReservationId(null);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Receipt upload failed.");
+    }
   };
 
   const handleReviewSubmit = (summaryText: string) => {
@@ -150,10 +160,12 @@ export default function MyRewardContainer({
 
         {/* Content Layout stack (Frame 2147229211) */}
         <div className="w-full max-w-[669px] flex flex-col items-center gap-[26px] pb-10">
-          <PendingRebatesCard onUploadReceiptClick={() => {
+          <PendingRebatesCard onUploadReceiptClick={(reservationId) => {
+            setSelectedReservationId(reservationId);
+            setUploadError(null);
             const el = document.getElementById("upload-receipt-section");
             el?.scrollIntoView({ behavior: "smooth" });
-          }} reservations={reservations} />
+          }} reservations={reservations} selectedReservationId={selectedReservationId} />
           
           <EarnMoreCard opportunities={reviewOpportunities} onStartReviewClick={(item) => setActiveReviewItem(item)} />
           
@@ -171,6 +183,11 @@ export default function MyRewardContainer({
               onUploadStart={() => console.log("Upload started...")}
               onUploadSuccess={handleUploadSuccess}
             />
+            {uploadError && (
+              <p className="mt-3 text-center text-sm font-medium text-red-500">
+                {uploadError}
+              </p>
+            )}
           </div>
         </div>
       </main>

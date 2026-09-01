@@ -4,10 +4,15 @@ import Image from "next/image";
 
 interface PendingRebatesCardProps {
   reservations?: Record<string, unknown>[];
-  onUploadReceiptClick: () => void;
+  selectedReservationId?: string | null;
+  onUploadReceiptClick: (reservationId: string) => void;
 }
 
-export default function PendingRebatesCard({ reservations = [], onUploadReceiptClick }: PendingRebatesCardProps) {
+export default function PendingRebatesCard({
+  reservations = [],
+  selectedReservationId,
+  onUploadReceiptClick,
+}: PendingRebatesCardProps) {
   return (
     <section className="w-full max-w-[669px] bg-[#FEFEFE] shadow-[0px_4px_8px_rgba(0,0,0,0.25)] rounded-[12px] p-6 sm:py-[12px] sm:px-[18px] flex flex-col gap-[7px] border border-gray-100">
       {/* Title block (Frame 2147229169) */}
@@ -32,8 +37,12 @@ export default function PendingRebatesCard({ reservations = [], onUploadReceiptC
             {String(reservation.campaign_name || reservation.product_name || "Pending rebate")}
           </span>
           <button
-            onClick={onUploadReceiptClick}
-            className="w-[114px] h-[29px] bg-[#3E3EDF] text-white text-[14px] font-normal rounded-[4px] hover:bg-[#3232c7] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center flex-shrink-0"
+            onClick={() => onUploadReceiptClick(String(reservation.id || ""))}
+            className={`w-[114px] h-[29px] text-white text-[14px] font-normal rounded-[4px] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center flex-shrink-0 ${
+              selectedReservationId && selectedReservationId === String(reservation.id || "")
+                ? "bg-[#2727AA]"
+                : "bg-[#3E3EDF] hover:bg-[#3232c7]"
+            }`}
           >
             Upload Receipt
           </button>
