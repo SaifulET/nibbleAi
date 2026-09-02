@@ -358,8 +358,11 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
               nibblApi.receipts({ page: 1 }),
               nibblApi.activity({ page: 1 }),
             ]);
+          const pendingUnuploaded = listResults(reservations).filter(
+            (reservation) => reservation.receipt_status === null
+          );
           set({
-            reservations: listResults(reservations),
+            reservations: pendingUnuploaded,
             reviewOpportunities: listResults(reviewOpportunities),
             receipts: listResults(receipts),
             activities: listResults(activities),
@@ -409,9 +412,16 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
         }
       },
       saveOffer: async (campaignId) => {
-        const saved = await nibblApi.saveOffer(campaignId);
-        await get().loadSavedOffers();
-        return saved;
+        set({ status: "loading", error: null });
+        try {
+          const saved = await nibblApi.saveOffer(campaignId);
+          await get().loadSavedOffers();
+          set({ status: "success", error: null });
+          return saved;
+        } catch (error) {
+          set({ status: "error", error: readError(error) });
+          throw error;
+        }
       },
       loadWallet: async () => {
         set({ status: "loading", error: null });
@@ -432,15 +442,29 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
         }
       },
       claimOffer: async (campaignId) => {
-        const reservation = await nibblApi.createReservation(campaignId);
-        await get().loadRewardsHub();
-        return reservation;
+        set({ status: "loading", error: null });
+        try {
+          const reservation = await nibblApi.createReservation(campaignId);
+          await get().loadRewardsHub();
+          set({ status: "success", error: null });
+          return reservation;
+        } catch (error) {
+          set({ status: "error", error: readError(error) });
+          throw error;
+        }
       },
       uploadReceipt: async (reservationId, file) => {
-        const receipt = await nibblApi.uploadReceipt(reservationId, file);
-        await get().loadRewardsHub();
-        if (receipt.status === "verified") await get().loadWallet();
-        return receipt;
+        set({ status: "loading", error: null });
+        try {
+          const receipt = await nibblApi.uploadReceipt(reservationId, file);
+          await get().loadRewardsHub();
+          if (receipt.status === "verified") await get().loadWallet();
+          set({ status: "success", error: null });
+          return receipt;
+        } catch (error) {
+          set({ status: "error", error: readError(error) });
+          throw error;
+        }
       },
       submitReview: async (sessionId, rating, content) => {
         const review = await nibblApi.submitReview(sessionId, { rating, content });

@@ -5,12 +5,16 @@ import Image from "next/image";
 interface PendingRebatesCardProps {
   reservations?: Record<string, unknown>[];
   selectedReservationId?: string | null;
+  selectedMessage?: string | null;
+  selectedMessageTone?: "success" | "error";
   onUploadReceiptClick: (reservationId: string) => void;
 }
 
 export default function PendingRebatesCard({
   reservations = [],
   selectedReservationId,
+  selectedMessage,
+  selectedMessageTone = "success",
   onUploadReceiptClick,
 }: PendingRebatesCardProps) {
   return (
@@ -31,26 +35,38 @@ export default function PendingRebatesCard({
         </span>
       </div>
 
-      {reservations.length ? reservations.slice(0, 3).map((reservation) => (
-        <div key={String(reservation.id)} className="w-full h-[49px] border-b border-[#E0E0E0] flex items-center justify-between py-[10px] gap-4">
-          <span className="text-[14px] font-normal leading-[17px] text-[#1F1D1D] truncate">
-            {String(reservation.campaign_name || reservation.product_name || "Pending rebate")}
-          </span>
-          <button
-            onClick={() => onUploadReceiptClick(String(reservation.id || ""))}
-            className={`w-[114px] h-[29px] text-white text-[14px] font-normal rounded-[4px] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center flex-shrink-0 ${
-              selectedReservationId && selectedReservationId === String(reservation.id || "")
-                ? "bg-[#2727AA]"
-                : "bg-[#3E3EDF] hover:bg-[#3232c7]"
-            }`}
-          >
-            Upload Receipt
-          </button>
-        </div>
-      )) : (
+      {reservations.length ? reservations.slice(0, 3).map((reservation) => {
+        const reservationId = String(reservation.id || "");
+        const isSelected = selectedReservationId === reservationId;
+
+        return (
+          <div key={reservationId} className="w-full border-b border-[#E0E0E0] py-[10px]">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[14px] font-normal leading-[17px] text-[#1F1D1D] truncate">
+                {String(reservation.campaign_name || reservation.product_name || "Pending rebate")}
+              </span>
+              <button
+                onClick={() => onUploadReceiptClick(reservationId)}
+                className={`w-[114px] h-[29px] text-white text-[14px] font-normal rounded-[4px] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center flex-shrink-0 ${
+                  isSelected
+                    ? "bg-[#2727AA]"
+                    : "bg-[#3E3EDF] hover:bg-[#3232c7]"
+                }`}
+              >
+                Upload Receipt
+              </button>
+            </div>
+            {isSelected && selectedMessage && (
+              <p className={`mt-2 text-[12px] font-medium ${selectedMessageTone === "error" ? "text-[#E65353]" : "text-[#00A671]"}`}>
+                {selectedMessage}
+              </p>
+            )}
+          </div>
+        );
+      }) : (
         <div className="w-full min-h-[49px] border-b border-[#E0E0E0] flex items-center py-[10px]">
           <span className="text-[14px] font-normal leading-[17px] text-[#575757]">
-            No active rebate claims from the backend.
+            No claims are waiting for receipt upload.
           </span>
         </div>
       )}

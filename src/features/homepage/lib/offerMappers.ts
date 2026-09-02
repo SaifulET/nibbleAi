@@ -5,6 +5,7 @@ import { API_BASE_URL, type ApiRecord } from "@/lib/api/backendApi";
 export interface DisplayOffer {
   id: string;
   brand: string;
+  campaignName: string;
   expires: string;
   title: string;
   rating: number;
@@ -60,9 +61,10 @@ export const rewardLabel = (offer?: ApiRecord | null) => {
 export const displayOffer = (offer: ApiRecord, index = 0): DisplayOffer => ({
   id: campaignId(offer) || String(index),
   brand: text(offer.brand_name ?? offer.brand, "NibblAI"),
+  campaignName: text(offer.campaign_name ?? offer.name ?? offer.title, "Reward offer"),
   expires: dateOnly(offer.end_at ?? offer.expires_at ?? offer.expires),
   title: text(offer.product_name ?? offer.campaign_name ?? offer.name ?? offer.title, "Reward offer"),
-  rating: Number(offer.rating ?? offer.average_rating ?? 4),
+  rating: Number(offer.rating ?? offer.average_rating ?? 0),
   reviewsCount: Number(offer.review_count ?? offer.reviews_count ?? 0),
   rewardLabel: rewardLabel(offer),
   image: imageUrl(offer.product_image ?? offer.image ?? offer.thumbnail, "") || null,

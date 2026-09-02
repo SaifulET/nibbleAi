@@ -23,10 +23,10 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
     offers,
     unreadCount,
     status,
-    error,
     loadOfferDetails,
     claimOffer,
   } = useConsumerApiStore();
+  const latestError = useConsumerApiStore((state) => state.error);
 
   useEffect(() => {
     if (campaignId) void loadOfferDetails(campaignId);
@@ -35,6 +35,8 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
   const fallbackOffer = offers.find((offer) => String(offer.campaign_id ?? offer.id) === campaignId);
   const offer = selectedOffer || fallbackOffer;
   const details = offer ? displayOffer(offer) : null;
+  const reviewCount = details?.reviewsCount || 0;
+  const visibleRating = reviewCount > 0 ? Math.max(0, Math.min(5, Number(details?.rating || 0))) : 0;
 
   const handleClaimClick = async () => {
     if (!accessToken) {
@@ -53,7 +55,8 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
       setMessage("Offer claimed. Upload your receipt to complete the reward.");
       onTabChange("scan");
     } catch {
-      setMessage(null);
+      const backendMessage = useConsumerApiStore.getState().error;
+      setMessage(backendMessage || "Could not claim this offer.");
     }
   };
 
@@ -64,9 +67,9 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
 
       {/* Main Page Layout Wrapper */}
       <main className="flex-grow flex flex-col items-center py-10 px-4 sm:px-6 max-w-[1440px] mx-auto w-full relative">
-        {/* Brand Name Title */}
+        {/* Campaign Name Title */}
         <h1 className="text-[32px] font-bold text-[#1F1D1D] text-center mb-6 mt-4">
-          {details?.brand || "Offer Details"}
+          {details?.campaignName || details?.title || "Offer Details"}
         </h1>
 
         {/* Claim Details Card (Frame 2147229230) */}
@@ -114,15 +117,19 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
               {/* Star Rating Row (Frame 2147228493) */}
               <div className="w-[170px] h-[20px] flex items-center justify-center gap-2 text-[14px] font-semibold leading-[17px] text-[#1F1D1D]">
                 {/* Frame 2147228492 */}
-                <div className="w-[92px] h-[20px] flex items-center gap-1 flex-shrink-0">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <svg key={i} className="w-[20px] h-[20px] text-[#FF9F19] fill-current" viewBox="0 0 20 20">
+                <div className="w-[116px] h-[20px] flex items-center gap-1 flex-shrink-0">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <svg
+                      key={i}
+                      className={`w-[20px] h-[20px] fill-current ${i < Math.round(visibleRating) ? "text-[#FF9F19]" : "text-[#C0C0C0]"}`}
+                      viewBox="0 0 20 20"
+                    >
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
                   ))}
                 </div>
                 <span className="truncate">
-                  {Number(details?.rating || 0).toFixed(2)} ({details?.reviewsCount || 0})
+                  {visibleRating.toFixed(2)} ({reviewCount})
                 </span>
               </div>
 
@@ -139,13 +146,13 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
                 Claim Offer
             </button>
             {message && (
-              <p className="text-center text-[13px] font-medium text-[#00A671]">
+              <p className={`text-center text-[13px] font-medium ${status === "error" ? "text-[#E65353]" : "text-[#00A671]"}`}>
                 {message}
               </p>
             )}
-            {error && status === "error" && (
+            {latestError && status === "error" && latestError !== message && (
               <p className="text-center text-[13px] font-medium text-[#E65353]">
-                {error}
+                {latestError}
               </p>
             )}
             </div>

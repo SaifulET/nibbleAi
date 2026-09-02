@@ -22,10 +22,10 @@ export default function ViewDetails({ campaignId, onBack, onTabChange }: ViewDet
     offers,
     unreadCount,
     status,
-    error,
     loadOfferDetails,
     saveOffer,
   } = useConsumerApiStore();
+  const latestError = useConsumerApiStore((state) => state.error);
 
   useEffect(() => {
     if (campaignId) void loadOfferDetails(campaignId);
@@ -51,7 +51,8 @@ export default function ViewDetails({ campaignId, onBack, onTabChange }: ViewDet
       await saveOffer(id);
       setSavedMessage("Offer saved from the backend.");
     } catch {
-      setSavedMessage(null);
+      const backendMessage = useConsumerApiStore.getState().error;
+      setSavedMessage(backendMessage || "Could not save this offer.");
     }
   };
 
@@ -64,7 +65,7 @@ export default function ViewDetails({ campaignId, onBack, onTabChange }: ViewDet
           <div className="w-full flex flex-col gap-6">
             <div className="w-full flex flex-col gap-[3px]">
               <h1 className="text-[32px] font-medium leading-[39px] text-[#2D2D2D] w-full">
-                {details?.title || "Offer Details"}
+                {details?.campaignName || details?.title || "Offer Details"}
               </h1>
               <span className="text-[18px] font-normal leading-[22px] text-[#4D4D4D]">
                 {details?.expires ? `Expires ${details.expires}` : "Backend offer"}
@@ -183,13 +184,13 @@ export default function ViewDetails({ campaignId, onBack, onTabChange }: ViewDet
               Save My Reward
             </button>
             {savedMessage && (
-              <p className="text-center text-[13px] font-medium text-[#00A671]">
+              <p className={`text-center text-[13px] font-medium ${status === "error" ? "text-[#E65353]" : "text-[#00A671]"}`}>
                 {savedMessage}
               </p>
             )}
-            {status === "error" && error && (
+            {status === "error" && latestError && latestError !== savedMessage && (
               <p className="text-center text-[13px] font-medium text-[#E65353]">
-                {error}
+                {latestError}
               </p>
             )}
           </div>

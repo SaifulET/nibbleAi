@@ -48,16 +48,19 @@ export default function MyRewardContainer({
   const [activeReviewItem, setActiveReviewItem] = useState<string | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const {
     receipts: apiReceipts,
     activities: apiActivities,
     reservations,
     reviewOpportunities,
     unreadCount,
+    status,
     loadRewardsHub,
     uploadReceipt,
     inviteFriend,
   } = useConsumerApiStore();
+  const latestError = useConsumerApiStore((state) => state.error);
 
   useEffect(() => {
     void loadRewardsHub();
@@ -76,11 +79,12 @@ export default function MyRewardContainer({
   useEffect(() => {
     if (!autoUploadReservationId) return;
 
-    const timer = setTimeout(() => {
-      setSelectedReservationId(autoUploadReservationId);
-      setUploadError(null);
-      document.getElementById("upload-receipt-section")?.scrollIntoView({ behavior: "smooth" });
-      onClearAutoUploadReservation?.();
+      const timer = setTimeout(() => {
+        setSelectedReservationId(autoUploadReservationId);
+        setUploadError(null);
+        setUploadMessage(null);
+        document.getElementById("upload-receipt-section")?.scrollIntoView({ behavior: "smooth" });
+        onClearAutoUploadReservation?.();
     }, 0);
 
     return () => clearTimeout(timer);
@@ -120,15 +124,21 @@ export default function MyRewardContainer({
     const reservationId = selectedReservationId || String(reservations[0]?.id || "");
     if (!reservationId) {
       setUploadError("Select a pending reward before uploading a receipt.");
+      setUploadMessage(null);
       return;
     }
 
     try {
       setUploadError(null);
-      await uploadReceipt(reservationId, file);
+      setUploadMessage(null);
+      const receipt = await uploadReceipt(reservationId, file);
+      const responseMessage = String(receipt.detail || receipt.message || "");
+      setUploadMessage(responseMessage || "Receipt uploaded. Verification is in progress.");
       setSelectedReservationId(null);
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Receipt upload failed.");
+      const backendMessage = useConsumerApiStore.getState().error;
+      setUploadError(backendMessage || (error instanceof Error ? error.message : "Receipt upload failed."));
+      setUploadMessage(null);
     }
   };
 
@@ -163,9 +173,15 @@ export default function MyRewardContainer({
           <PendingRebatesCard onUploadReceiptClick={(reservationId) => {
             setSelectedReservationId(reservationId);
             setUploadError(null);
+            setUploadMessage(null);
             const el = document.getElementById("upload-receipt-section");
             el?.scrollIntoView({ behavior: "smooth" });
-          }} reservations={reservations} selectedReservationId={selectedReservationId} />
+          }}
+          reservations={reservations}
+          selectedReservationId={selectedReservationId}
+          selectedMessage={uploadError || uploadMessage}
+          selectedMessageTone={uploadError ? "error" : "success"}
+          />
           
           <EarnMoreCard opportunities={reviewOpportunities} onStartReviewClick={(item) => setActiveReviewItem(item)} />
           
@@ -180,12 +196,15 @@ export default function MyRewardContainer({
           
           <div id="upload-receipt-section" className="w-full max-w-[667px]">
             <UploadReceiptCard
-              onUploadStart={() => console.log("Upload started...")}
+              onUploadStart={() => {
+                setUploadError(null);
+                setUploadMessage(null);
+              }}
               onUploadSuccess={handleUploadSuccess}
             />
-            {uploadError && (
-              <p className="mt-3 text-center text-sm font-medium text-red-500">
-                {uploadError}
+            {(uploadError || uploadMessage || (status === "error" && latestError && latestError !== uploadError)) && (
+              <p className={`mt-3 text-center text-sm font-medium ${uploadError || status === "error" ? "text-red-500" : "text-[#00A671]"}`}>
+                {uploadError || uploadMessage || latestError}
               </p>
             )}
           </div>
