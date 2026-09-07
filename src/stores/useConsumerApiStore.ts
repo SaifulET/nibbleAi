@@ -115,6 +115,17 @@ const paginationMeta = (response: unknown, page: number): PaginationState => {
 const readError = (error: unknown) =>
   error instanceof ApiError ? error.message : "Something went wrong.";
 
+const optionalListResponse = async (
+  request: Promise<unknown>
+): Promise<unknown> => {
+  try {
+    return await request;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  }
+};
+
 const OFFER_PAGE_SIZE = 20;
 
 export const useConsumerApiStore = create<ConsumerApiState>()(
@@ -354,7 +365,7 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           const [reservations, reviewOpportunities, receipts, activities] =
             await Promise.all([
               nibblApi.reservations({ status: "active", page: 1 }),
-              nibblApi.reviewOpportunities(),
+              optionalListResponse(nibblApi.reviewOpportunities()),
               nibblApi.receipts({ page: 1 }),
               nibblApi.activity({ page: 1 }),
             ]);

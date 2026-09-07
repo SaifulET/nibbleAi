@@ -632,12 +632,22 @@ const buildUrl = (
   return url.toString();
 };
 
+const textResponseMessage = (response: Response, text: string) => {
+  const trimmed = text.trim();
+  const fallback = response.statusText || `Request failed with ${response.status}`;
+
+  if (!trimmed || trimmed.startsWith("<")) return fallback;
+  if ((response.headers.get("content-type") || "").includes("text/html")) return fallback;
+
+  return trimmed.length > 240 ? `${trimmed.slice(0, 240)}...` : trimmed;
+};
+
 const readResponseBody = async (response: Response) => {
   const contentType = response.headers.get("content-type") || "";
   if (response.status === 204 || response.status === 205) return null;
   if (contentType.includes("application/json")) return response.json();
   const text = await response.text();
-  return text ? { detail: text } : null;
+  return text ? { detail: textResponseMessage(response, text) } : null;
 };
 
 export const apiClient = {
