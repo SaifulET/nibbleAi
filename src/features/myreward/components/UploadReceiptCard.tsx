@@ -9,6 +9,7 @@ interface UploadReceiptCardProps {
 }
 
 export default function UploadReceiptCard({ onUploadStart, onUploadSuccess }: UploadReceiptCardProps) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -22,6 +23,7 @@ export default function UploadReceiptCard({ onUploadStart, onUploadSuccess }: Up
 
     void Promise.resolve(onUploadSuccess(file)).finally(() => {
       setIsUploading(false);
+      e.target.value = "";
     });
   };
 
@@ -30,8 +32,7 @@ export default function UploadReceiptCard({ onUploadStart, onUploadSuccess }: Up
   };
 
   const triggerTakePhotoClick = () => {
-    // Fallback to uploading file as taking photo
-    fileInputRef.current?.click();
+    cameraInputRef.current?.click();
   };
 
   return (
@@ -41,6 +42,14 @@ export default function UploadReceiptCard({ onUploadStart, onUploadSuccess }: Up
       </span>
 
       {/* Hidden file input */}
+      <input
+        type="file"
+        ref={cameraInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+      />
       <input
         type="file"
         ref={fileInputRef}

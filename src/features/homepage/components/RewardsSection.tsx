@@ -20,6 +20,7 @@ interface ProductOffer {
 interface RewardsSectionProps {
   offers?: Record<string, unknown>[];
   categories?: string[];
+  activeCategory?: string;
   isLoading?: boolean;
   error?: string | null;
   pagination?: {
@@ -41,6 +42,16 @@ const offerImage = (value: unknown) =>
 const discountText = (offer: Record<string, unknown>) =>
   String(offer.discount_label || (offer.reward_amount ? `$${offer.reward_amount}` : ""));
 
+const normalizeCategory = (value: string) => value.trim().toLowerCase();
+
+const formatCategoryLabel = (value: string) => {
+  if (normalizeCategory(value) === "all") return "All";
+
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
 const mapOffer = (offer: Record<string, unknown>, index: number): ProductOffer => ({
   id: String(offer.campaign_id ?? offer.id ?? index),
   campaignId: String(offer.campaign_id ?? offer.id ?? ""),
@@ -57,6 +68,7 @@ const mapOffer = (offer: Record<string, unknown>, index: number): ProductOffer =
 export default function RewardsSection({
   offers,
   categories: categoryOptions,
+  activeCategory,
   isLoading = false,
   error,
   pagination,
@@ -65,10 +77,21 @@ export default function RewardsSection({
   onClaimOffer,
   onViewOffer,
 }: RewardsSectionProps) {
-  const [activeFilter, setActiveFilter] = useState<string>("All");
+  const [localActiveCategory, setLocalActiveCategory] = useState<string>("All");
 
-  const categories = categoryOptions?.length ? categoryOptions : ["All"];
   const sourceOffers = (offers || []).map(mapOffer);
+  const selectedCategory = activeCategory || localActiveCategory;
+  const categoryValues = [
+    "All",
+    ...(categoryOptions?.length
+      ? categoryOptions
+      : sourceOffers.map((offer) => offer.category)),
+  ].filter((category) => category.trim());
+  const categories = Array.from(
+    new Map(
+      categoryValues.map((category) => [normalizeCategory(category), category])
+    ).values()
+  );
   const currentPage = pagination?.page || 1;
   const pageSize = pagination?.pageSize || Math.max(sourceOffers.length, 1);
   const totalItems = pagination?.count || sourceOffers.length;
@@ -79,9 +102,12 @@ export default function RewardsSection({
     .filter((page) => page >= 1 && page <= totalPages)
     .sort((a, b) => a - b);
 
-  const filteredOffers = activeFilter === "All"
+  const filteredOffers = normalizeCategory(selectedCategory) === "all"
     ? sourceOffers
-    : sourceOffers.filter((offer) => offer.category === activeFilter);
+    : sourceOffers.filter(
+        (offer) =>
+          normalizeCategory(offer.category) === normalizeCategory(selectedCategory)
+      );
 
   return (
     <div className="w-full max-w-[1137px] mx-auto font-sans flex flex-col gap-6">
@@ -95,76 +121,25 @@ export default function RewardsSection({
         {/* Filter Categories (Frame 2147229006) */}
         <div className="flex items-center gap-[24px] overflow-x-auto py-1 scrollbar-none w-full">
           {categories.map((cat) => {
-            const isActive = activeFilter === cat;
-            if (cat === "All") {
-              return (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setActiveFilter(cat);
-                    onCategoryChange?.(cat);
-                  }}
-                  className={`w-[39px] h-[27px] rounded-[36px] flex items-center justify-center text-xs font-normal transition-all cursor-pointer flex-shrink-0 focus:outline-none ${
-                    isActive
-                      ? "bg-[#3E3EDF] text-[#FEFEFE] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
-                      : "bg-[#FEFEFE] text-[#575757] border border-[#707070] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
-                  }`}
-                >
-                  All
-                </button>
-              );
-            }
-            if (cat === "Fashion") {
-              return (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setActiveFilter(cat);
-                    onCategoryChange?.(cat);
-                  }}
-                  className={`w-[79px] h-[27px] rounded-[36px] flex items-center justify-center text-xs font-normal transition-all cursor-pointer flex-shrink-0 focus:outline-none ${
-                    isActive
-                      ? "bg-[#3E3EDF] text-[#FEFEFE] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
-                      : "bg-[#FEFEFE] text-[#575757] border border-[#707070] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
-                  }`}
-                >
-                  Fashion
-                </button>
-              );
-            }
-            if (cat === "Food") {
-              return (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setActiveFilter(cat);
-                    onCategoryChange?.(cat);
-                  }}
-                  className={`w-[58px] h-[27px] rounded-[36px] flex items-center justify-center text-xs font-normal transition-all cursor-pointer flex-shrink-0 focus:outline-none ${
-                    isActive
-                      ? "bg-[#3E3EDF] text-[#FEFEFE] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
-                      : "bg-[#FEFEFE] text-[#575757] border border-[#707070] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
-                  }`}
-                >
-                  Food
-                </button>
-              );
-            }
-            // Electronics
+            const isActive =
+              normalizeCategory(selectedCategory) === normalizeCategory(cat);
+
             return (
               <button
                 key={cat}
+                type="button"
+                aria-pressed={isActive}
                 onClick={() => {
-                  setActiveFilter(cat);
+                  setLocalActiveCategory(cat);
                   onCategoryChange?.(cat);
                 }}
-                className={`w-[104px] h-[27px] rounded-[36px] flex items-center justify-center text-xs font-normal transition-all cursor-pointer flex-shrink-0 focus:outline-none ${
+                className={`h-[27px] min-w-[39px] max-w-[160px] rounded-[36px] px-4 flex items-center justify-center text-xs font-normal transition-all cursor-pointer flex-shrink-0 focus:outline-none ${
                   isActive
                     ? "bg-[#3E3EDF] text-[#FEFEFE] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
                     : "bg-[#FEFEFE] text-[#575757] border border-[#707070] shadow-[0_4px_4px_rgba(0,0,0,0.08)]"
                 }`}
               >
-                Electronics
+                <span className="truncate">{formatCategoryLabel(cat)}</span>
               </button>
             );
           })}

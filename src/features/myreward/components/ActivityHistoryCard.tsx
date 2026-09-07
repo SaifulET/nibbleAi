@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 
 interface ActivityItem {
@@ -15,10 +16,17 @@ interface ActivityItem {
 
 interface ActivityHistoryCardProps {
   activities: ActivityItem[];
-  onViewFullHistoryClick: () => void;
 }
 
-export default function ActivityHistoryCard({ activities, onViewFullHistoryClick }: ActivityHistoryCardProps) {
+const PREVIEW_LIMIT = 3;
+
+export default function ActivityHistoryCard({ activities }: ActivityHistoryCardProps) {
+  const [showFullHistory, setShowFullHistory] = useState(false);
+  const visibleActivities = showFullHistory
+    ? activities
+    : activities.slice(0, PREVIEW_LIMIT);
+  const hasMoreHistory = activities.length > PREVIEW_LIMIT;
+
   return (
     <section className="w-full max-w-[669px] bg-[#FEFEFE] shadow-[0px_4px_8.4px_rgba(0,0,0,0.12)] rounded-[12px] p-6 sm:py-[12px] sm:px-[18px] flex flex-col gap-[17px] border border-gray-100/60">
       {/* Title Header (Frame 2147229169) */}
@@ -30,7 +38,7 @@ export default function ActivityHistoryCard({ activities, onViewFullHistoryClick
 
       {/* List (Frame 2147229254 etc) */}
       <div className="flex flex-col w-full">
-        {activities.length ? activities.map((item) => (
+        {visibleActivities.length ? visibleActivities.map((item) => (
           <div
             key={item.id}
             className="w-full min-h-[75px] border-b border-[#E0E0E0] last:border-b-0 flex items-center justify-between py-3.5 gap-2"
@@ -91,14 +99,16 @@ export default function ActivityHistoryCard({ activities, onViewFullHistoryClick
       </div>
 
       {/* View Full History Button Link */}
+      {hasMoreHistory && (
       <div className="w-full flex justify-center mt-1">
         <button
-          onClick={onViewFullHistoryClick}
+          onClick={() => setShowFullHistory((value) => !value)}
           className="border-b border-[#3E3EDF] text-[#3E3EDF] text-[16px] sm:text-[18px] font-semibold leading-[22px] pb-[2px] hover:text-[#2d2db0] hover:border-[#2d2db0] active:scale-[0.98] transition-all cursor-pointer focus:outline-none"
         >
-          View Full History
+          {showFullHistory ? "View Less" : "View Full History"}
         </button>
       </div>
+      )}
     </section>
   );
 }

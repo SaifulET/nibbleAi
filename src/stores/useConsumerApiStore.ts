@@ -66,7 +66,11 @@ export interface ConsumerApiState {
   saveOffer: (campaignId: string) => Promise<ApiRecord>;
   claimOffer: (campaignId: string) => Promise<ApiRecord>;
   uploadReceipt: (reservationId: string, file: File) => Promise<ApiRecord>;
-  submitReview: (sessionId: string, rating: number, content?: string) => Promise<ApiRecord>;
+  submitReview: (
+    opportunity: ApiRecord,
+    rating: number,
+    answers: { question: string; answer: string }[]
+  ) => Promise<ApiRecord>;
   inviteFriend: (fullName: string, contact: string) => Promise<void>;
   createPayoutMethod: (provider: "paypal" | "venmo", handle: string) => Promise<ApiRecord>;
   requestWithdrawal: (payoutMethodId: string, amount: string) => Promise<ApiRecord>;
@@ -124,6 +128,89 @@ const optionalListResponse = async (
     if (error instanceof ApiError && error.status === 404) return [];
     throw error;
   }
+};
+
+const stringValue = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "number") return String(value);
+  }
+  return "";
+};
+
+const recordArray = (value: unknown): ApiRecord[] =>
+  Array.isArray(value)
+    ? value.filter(
+        (item): item is ApiRecord => Boolean(item) && typeof item === "object"
+      )
+    : [];
+
+const receiptReviewOpportunity = (
+  receipt: ApiRecord,
+  reviewedProductIds: Set<string>,
+  reviewRewardAmount: string
+): ApiRecord | null => {
+  if (String(receipt.status || "").toLowerCase() !== "verified") return null;
+
+  const lineItems = recordArray(receipt.line_items);
+  const matchedLine = lineItems.find((item) =>
+    stringValue(item.matched_product, item.product, item.product_id)
+  );
+  const productId = stringValue(
+    receipt.product,
+    receipt.product_id,
+    matchedLine?.matched_product,
+    matchedLine?.product,
+    matchedLine?.product_id
+  );
+
+  if (!productId || reviewedProductIds.has(productId)) return null;
+
+  const receiptId = stringValue(receipt.id);
+  return {
+    id: `receipt-review:${receiptId || productId}`,
+    receipt_id: receiptId,
+    product: productId || null,
+    product_id: productId || null,
+    product_name: stringValue(
+      receipt.product_name,
+      matchedLine?.matched_product_name,
+      receipt.campaign_name,
+      "Review opportunity"
+    ),
+    brand_name: stringValue(receipt.brand_name),
+    campaign_name: stringValue(receipt.campaign_name),
+    reward_amount: reviewRewardAmount,
+    created_at: receipt.created_at,
+    source: "verified_receipt",
+  };
+};
+
+const mergeReviewOpportunities = (
+  opportunities: ApiRecord[],
+  receipts: ApiRecord[],
+  reviews: ApiRecord[],
+  config: ApiRecord | null
+) => {
+  const reviewedProductIds = new Set(
+    reviews
+      .map((review) => stringValue(review.product, review.product_id))
+      .filter(Boolean)
+  );
+  const reviewRewardAmount = stringValue(config?.review_reward_amount, "1.00");
+  const derived = receipts
+    .map((receipt) =>
+      receiptReviewOpportunity(receipt, reviewedProductIds, reviewRewardAmount)
+    )
+    .filter((item): item is ApiRecord => Boolean(item));
+  const seen = new Set<string>();
+
+  return [...opportunities, ...derived].filter((item) => {
+    const key = stringValue(item.product, item.product_id, item.id);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const OFFER_PAGE_SIZE = 20;
@@ -362,20 +449,27 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
       loadRewardsHub: async () => {
         set({ status: "loading", error: null });
         try {
-          const [reservations, reviewOpportunities, receipts, activities] =
+          const [reservations, reviewOpportunities, receipts, activities, reviews] =
             await Promise.all([
               nibblApi.reservations({ status: "active", page: 1 }),
               optionalListResponse(nibblApi.reviewOpportunities()),
               nibblApi.receipts({ page: 1 }),
               nibblApi.activity({ page: 1 }),
+              optionalListResponse(nibblApi.myReviews()),
             ]);
+          const receiptList = listResults(receipts);
           const pendingUnuploaded = listResults(reservations).filter(
             (reservation) => reservation.receipt_status === null
           );
           set({
             reservations: pendingUnuploaded,
-            reviewOpportunities: listResults(reviewOpportunities),
-            receipts: listResults(receipts),
+            reviewOpportunities: mergeReviewOpportunities(
+              listResults(reviewOpportunities),
+              receiptList,
+              listResults(reviews),
+              get().config
+            ),
+            receipts: receiptList,
             activities: listResults(activities),
             status: "success",
           });
@@ -477,11 +571,27 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           throw error;
         }
       },
-      submitReview: async (sessionId, rating, content) => {
-        const review = await nibblApi.submitReview(sessionId, { rating, content });
-        await get().loadRewardsHub();
-        await get().loadWallet();
-        return review;
+      submitReview: async (opportunity, rating, answers) => {
+        const productId = stringValue(opportunity.product, opportunity.product_id);
+        if (!productId) {
+          throw new Error("This review invitation is missing a product id.");
+        }
+
+        set({ status: "loading", error: null });
+        try {
+          const review = await nibblApi.createReview({
+            product: productId,
+            rating,
+            answers,
+          });
+          await get().loadRewardsHub();
+          await get().loadWallet();
+          set({ status: "success", error: null });
+          return review;
+        } catch (error) {
+          set({ status: "error", error: readError(error) });
+          throw error;
+        }
       },
       inviteFriend: async (fullName, contact) => {
         await nibblApi.inviteReferral({ full_name: fullName, contact });

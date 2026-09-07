@@ -13,7 +13,7 @@ export default function InviteFriendsCard({ onInviteClick }: InviteFriendsCardPr
           Invite Friends, Earn $5
         </span>
         <span className="text-[14px] sm:text-[16px] font-normal leading-[19px] text-[#575757] max-w-[300px] mx-auto mt-0.5">
-          Get $5 when you friend uploads their first receipt and completes $5 in review
+          Get $5 when your friend uploads their first receipt and completes a review
         </span>
       </div>
 

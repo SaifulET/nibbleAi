@@ -29,6 +29,7 @@ export default function HomepageContainer({
     offerPagination,
     categories,
     reservations,
+    receipts,
     reviewOpportunities,
     unreadCount,
     status,
@@ -74,6 +75,7 @@ export default function HomepageContainer({
           <RewardsSection
             offers={offers}
             categories={categories}
+            activeCategory={activeCategory}
             isLoading={status === "loading" && !offers.length}
             error={error}
             pagination={offerPagination}
@@ -91,11 +93,14 @@ export default function HomepageContainer({
         <section className="w-full max-w-[1137px] mx-auto flex justify-start">
           <PendingRewards
             reservations={reservations}
+            receipts={receipts}
             reviewOpportunities={reviewOpportunities}
             onUploadReceiptClick={(reservationId) =>
               onTabChange("scan", reservationId ? `reservation:${reservationId}` : undefined)
             }
-            onLeaveReviewClick={(itemName) => onTabChange("scan", itemName)}
+            onLeaveReviewClick={(opportunityId) =>
+              onTabChange("scan", opportunityId ? `review:${opportunityId}` : undefined)
+            }
           />
         </section>
 

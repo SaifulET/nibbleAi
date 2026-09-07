@@ -9,7 +9,7 @@ import ReceiptHistoryCard from "./ReceiptHistoryCard";
 import ActivityHistoryCard from "./ActivityHistoryCard";
 import InviteFriendsCard from "./InviteFriendsCard";
 import UploadReceiptCard from "./UploadReceiptCard";
-import ReviewChatModal from "./ReviewChatModal";
+import ReviewChatModal, { ReviewSubmission } from "./ReviewChatModal";
 import InviteFriendsModal from "./InviteFriendsModal";
 import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
 
@@ -45,7 +45,8 @@ export default function MyRewardContainer({
   onClearAutoOpenReview,
   onClearAutoUploadReservation,
 }: MyRewardContainerProps) {
-  const [activeReviewItem, setActiveReviewItem] = useState<string | null>(null);
+  const [activeReviewOpportunity, setActiveReviewOpportunity] =
+    useState<Record<string, unknown> | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function MyRewardContainer({
     status,
     loadRewardsHub,
     uploadReceipt,
+    submitReview,
     inviteFriend,
   } = useConsumerApiStore();
   const latestError = useConsumerApiStore((state) => state.error);
@@ -68,13 +70,28 @@ export default function MyRewardContainer({
 
   useEffect(() => {
     if (autoOpenReviewItem) {
+      const reviewId = autoOpenReviewItem.startsWith("review:")
+        ? autoOpenReviewItem.replace("review:", "")
+        : autoOpenReviewItem;
+      const opportunity = reviewOpportunities.find(
+        (item) =>
+          String(item.id || "") === reviewId ||
+          String(item.product_id || "") === reviewId ||
+          String(item.product || "") === reviewId ||
+          String(item.product_name || "") === reviewId
+      );
+
+      if (!opportunity && autoOpenReviewItem.startsWith("review:")) return;
+
       const timer = setTimeout(() => {
-        setActiveReviewItem(autoOpenReviewItem);
+        setActiveReviewOpportunity(
+          opportunity || { id: reviewId, product_name: reviewId }
+        );
         onClearAutoOpenReview?.();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [autoOpenReviewItem, onClearAutoOpenReview]);
+  }, [autoOpenReviewItem, onClearAutoOpenReview, reviewOpportunities]);
 
   useEffect(() => {
     if (!autoUploadReservationId) return;
@@ -142,15 +159,30 @@ export default function MyRewardContainer({
     }
   };
 
-  const handleReviewSubmit = (summaryText: string) => {
-    setActiveReviewItem(null);
+  const handleReviewSubmit = async (submission: ReviewSubmission) => {
+    if (!activeReviewOpportunity) {
+      throw new Error("No review invitation is selected.");
+    }
+
+    const itemName = String(
+      activeReviewOpportunity.product_name ||
+        activeReviewOpportunity.campaign_name ||
+        "Review"
+    );
+
+    await submitReview(
+      activeReviewOpportunity,
+      submission.rating,
+      submission.answers
+    );
+    setActiveReviewOpportunity(null);
     
     // Append review rebate success
     const newActivity: Activity = {
       id: `act-${Date.now()}`,
       type: "verified",
       title: `Review Approved- $1.00 added to wallet`,
-      subtitle: `Feedback submitted: "${summaryText.substring(0, 30)}..."`,
+      subtitle: `Feedback submitted for ${itemName}.`,
       statusText: "Verified",
       statusColor: "text-[#00A671]",
       iconBg: "#00D855",
@@ -178,18 +210,21 @@ export default function MyRewardContainer({
             el?.scrollIntoView({ behavior: "smooth" });
           }}
           reservations={reservations}
+          receipts={apiReceipts}
           selectedReservationId={selectedReservationId}
           selectedMessage={uploadError || uploadMessage}
           selectedMessageTone={uploadError ? "error" : "success"}
           />
           
-          <EarnMoreCard opportunities={reviewOpportunities} onStartReviewClick={(item) => setActiveReviewItem(item)} />
+          <EarnMoreCard
+            opportunities={reviewOpportunities}
+            onStartReviewClick={(item) => setActiveReviewOpportunity(item)}
+          />
           
           <ReceiptHistoryCard receipts={receipts} />
           
           <ActivityHistoryCard
             activities={activities}
-            onViewFullHistoryClick={() => {}}
           />
           
           <InviteFriendsCard onInviteClick={() => setIsInviteModalOpen(true)} />
@@ -213,10 +248,14 @@ export default function MyRewardContainer({
 
       <Footer onTabChange={onTabChange} />
 
-      {activeReviewItem && (
+      {activeReviewOpportunity && (
         <ReviewChatModal
-          itemName={activeReviewItem}
-          onClose={() => setActiveReviewItem(null)}
+          itemName={String(
+            activeReviewOpportunity.product_name ||
+              activeReviewOpportunity.campaign_name ||
+              "Review opportunity"
+          )}
+          onClose={() => setActiveReviewOpportunity(null)}
           onSubmit={handleReviewSubmit}
         />
       )}

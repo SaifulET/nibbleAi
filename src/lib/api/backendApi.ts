@@ -790,6 +790,19 @@ export const nibblApi = {
     requestEndpoint<ApiRecord[]>(backendApi.consumer.reviewOpportunities),
   submitReview: (sessionId: string, body: { rating: number; content?: string }) =>
     requestEndpoint<ApiRecord>(backendApi.consumer.submitReview(sessionId), body),
+  createReview: (body: {
+    product: string;
+    answers: { question: string; answer: string }[];
+    rating?: number;
+  }) =>
+    apiClient.request<ApiRecord>(backendApi.consumer.myReviews, {
+      method: "POST",
+      body,
+    }),
+  myReviews: () =>
+    requestEndpoint<ApiRecord[] | PaginatedResponse<ApiRecord>>(
+      backendApi.consumer.myReviews
+    ),
   wallet: () => requestEndpoint<ApiRecord>(backendApi.consumer.wallet),
   walletStatement: (query?: RequestOptions["query"]) =>
     requestEndpoint<PaginatedResponse<ApiRecord>>(

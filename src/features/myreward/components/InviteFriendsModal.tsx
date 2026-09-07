@@ -38,7 +38,7 @@ export default function InviteFriendsModal({ onClose, onSend }: InviteFriendsMod
               Invite Friends, Earn $5
             </span>
             <span className="text-[14px] font-normal leading-[17px] text-[#575757]">
-              Get $5 when you friend uploads their first receipt and completes $5 in review
+              Get $5 when your friend uploads their first receipt and completes a review
             </span>
           </div>
 
@@ -77,7 +77,7 @@ export default function InviteFriendsModal({ onClose, onSend }: InviteFriendsMod
             type="submit"
             className="w-full h-[54px] bg-[#3E3EDF] hover:bg-[#3232c7] active:scale-[0.99] transition-all text-white text-[18px] font-medium rounded-[8px] flex items-center justify-center cursor-pointer focus:outline-none shadow-[0px_4px_4px_rgba(0,0,0,0.12),_inset_0px_4px_4px_rgba(255,255,255,0.12)]"
           >
-            Sent
+            Send Invite
           </button>
         </form>
       </div>
