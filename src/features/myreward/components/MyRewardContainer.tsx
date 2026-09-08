@@ -17,8 +17,10 @@ interface MyRewardContainerProps {
   onTabChange: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
   autoOpenReviewItem?: string | null;
   autoUploadReservationId?: string | null;
+  autoSelectReservationId?: string | null;
   onClearAutoOpenReview?: () => void;
   onClearAutoUploadReservation?: () => void;
+  onClearAutoSelectReservation?: () => void;
 }
 
 interface Receipt {
@@ -38,16 +40,27 @@ interface Activity {
   iconSrc: string;
 }
 
+const valueText = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "number") return String(value);
+  }
+  return "";
+};
+
 export default function MyRewardContainer({
   onTabChange,
   autoOpenReviewItem,
   autoUploadReservationId,
+  autoSelectReservationId,
   onClearAutoOpenReview,
   onClearAutoUploadReservation,
+  onClearAutoSelectReservation,
 }: MyRewardContainerProps) {
   const [activeReviewOpportunity, setActiveReviewOpportunity] =
     useState<Record<string, unknown> | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const [focusedReservationId, setFocusedReservationId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const {
@@ -96,23 +109,83 @@ export default function MyRewardContainer({
   useEffect(() => {
     if (!autoUploadReservationId) return;
 
-      const timer = setTimeout(() => {
-        setSelectedReservationId(autoUploadReservationId);
-        setUploadError(null);
-        setUploadMessage(null);
-        document.getElementById("upload-receipt-section")?.scrollIntoView({ behavior: "smooth" });
-        onClearAutoUploadReservation?.();
+    const timer = setTimeout(() => {
+      setSelectedReservationId(autoUploadReservationId);
+      setFocusedReservationId(autoUploadReservationId);
+      setUploadError(null);
+      setUploadMessage(null);
+      document.getElementById("upload-receipt-section")?.scrollIntoView({ behavior: "smooth" });
+      onClearAutoUploadReservation?.();
     }, 0);
 
     return () => clearTimeout(timer);
   }, [autoUploadReservationId, onClearAutoUploadReservation]);
+
+  useEffect(() => {
+    if (!autoSelectReservationId) return;
+
+    const timer = setTimeout(() => {
+      setSelectedReservationId(autoSelectReservationId);
+      setFocusedReservationId(autoSelectReservationId);
+      setUploadError(null);
+      setUploadMessage("Offer claimed. Upload your receipt to complete the reward.");
+      onClearAutoSelectReservation?.();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [autoSelectReservationId, onClearAutoSelectReservation]);
+
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   
   const [localReceipts] = useState<Receipt[]>([]);
   const [localActivities, setLocalActivities] = useState<Activity[]>([]);
+  const focusedReservation = focusedReservationId
+    ? reservations.find((reservation) => valueText(reservation.id) === focusedReservationId)
+    : null;
+  const focusedCampaignId = valueText(focusedReservation?.campaign);
+  const focusedCampaignName = valueText(focusedReservation?.campaign_name);
+  const filteredReservations = focusedReservationId
+    ? reservations.filter((reservation) => valueText(reservation.id) === focusedReservationId)
+    : reservations;
+  const filteredApiReceipts = focusedReservationId
+    ? apiReceipts.filter((receipt) => {
+        const matchesReservation = valueText(receipt.reservation) === focusedReservationId;
+        const matchesCampaign =
+          focusedCampaignId && valueText(receipt.campaign) === focusedCampaignId;
+        const matchesName =
+          focusedCampaignName &&
+          valueText(receipt.campaign_name).toLowerCase() === focusedCampaignName.toLowerCase();
 
-  const receipts: Receipt[] = apiReceipts.length
-    ? apiReceipts.map((receipt) => ({
+        return matchesReservation || matchesCampaign || matchesName;
+      })
+    : apiReceipts;
+  const focusedReceiptIds = new Set(
+    filteredApiReceipts.map((receipt) => valueText(receipt.id)).filter(Boolean)
+  );
+  const filteredApiActivities = focusedReservationId
+    ? apiActivities.filter((activity) => {
+        const referenceId = valueText(activity.reference_id);
+        const title = valueText(activity.title, activity.description).toLowerCase();
+        return (
+          referenceId === focusedReservationId ||
+          focusedReceiptIds.has(referenceId) ||
+          Boolean(focusedCampaignName && title.includes(focusedCampaignName.toLowerCase()))
+        );
+      })
+    : apiActivities;
+  const filteredReviewOpportunities = focusedReservationId
+    ? reviewOpportunities.filter((opportunity) => {
+        const receiptId = valueText(opportunity.receipt_id);
+        const campaignName = valueText(opportunity.campaign_name).toLowerCase();
+        return (
+          Boolean(receiptId && focusedReceiptIds.has(receiptId)) ||
+          Boolean(focusedCampaignName && campaignName === focusedCampaignName.toLowerCase())
+        );
+      })
+    : reviewOpportunities;
+
+  const receipts: Receipt[] = filteredApiReceipts.length
+    ? filteredApiReceipts.map((receipt) => ({
         title: String(receipt.campaign_name || receipt.merchant || "Receipt"),
         date: String(receipt.created_at || "").slice(0, 10),
         status:
@@ -124,8 +197,8 @@ export default function MyRewardContainer({
       }))
     : localReceipts;
 
-  const activities: Activity[] = apiActivities.length
-    ? apiActivities.map((activity) => ({
+  const activities: Activity[] = filteredApiActivities.length
+    ? filteredApiActivities.map((activity) => ({
         id: String(activity.id || activity.created_at || activity.title || "activity"),
         type: activity.entry_type === "credit" ? "verified" as const : "pending" as const,
         title: String(activity.title || activity.description || "Activity"),
@@ -197,31 +270,37 @@ export default function MyRewardContainer({
 
       <main className="flex-grow flex flex-col items-center py-10 px-4 sm:px-6 max-w-[1440px] mx-auto w-full relative">
         <h1 className="text-[32px] font-medium leading-[39px] text-[#1F1D1D] text-center mb-10 mt-4">
-          Your Rewards Hub
+          {focusedReservationId ? "Rewards" : "My Rewards"}
         </h1>
+        <p className="max-w-[669px] -mt-8 mb-4 text-center text-[18px] leading-[26px] text-[#8A8A8A]">
+          Track your rewards, upload receipts, and earn more with every purchase.
+        </p>
 
         {/* Content Layout stack (Frame 2147229211) */}
         <div className="w-full max-w-[669px] flex flex-col items-center gap-[26px] pb-10">
           <PendingRebatesCard onUploadReceiptClick={(reservationId) => {
             setSelectedReservationId(reservationId);
+            setFocusedReservationId(reservationId);
             setUploadError(null);
             setUploadMessage(null);
             const el = document.getElementById("upload-receipt-section");
             el?.scrollIntoView({ behavior: "smooth" });
           }}
-          reservations={reservations}
-          receipts={apiReceipts}
+          reservations={filteredReservations}
+          receipts={filteredApiReceipts}
           selectedReservationId={selectedReservationId}
           selectedMessage={uploadError || uploadMessage}
           selectedMessageTone={uploadError ? "error" : "success"}
           />
           
-          <EarnMoreCard
-            opportunities={reviewOpportunities}
-            onStartReviewClick={(item) => setActiveReviewOpportunity(item)}
-          />
-          
           <ReceiptHistoryCard receipts={receipts} />
+
+          {filteredReviewOpportunities.length > 0 && (
+            <EarnMoreCard
+              opportunities={filteredReviewOpportunities}
+              onStartReviewClick={(item) => setActiveReviewOpportunity(item)}
+            />
+          )}
           
           <ActivityHistoryCard
             activities={activities}

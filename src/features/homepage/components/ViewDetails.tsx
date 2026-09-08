@@ -50,6 +50,7 @@ export default function ViewDetails({ campaignId, onBack, onTabChange }: ViewDet
     try {
       await saveOffer(id);
       setSavedMessage("Offer saved from the backend.");
+      onTabChange("scan");
     } catch {
       const backendMessage = useConsumerApiStore.getState().error;
       setSavedMessage(backendMessage || "Could not save this offer.");

@@ -40,7 +40,7 @@ export default function PendingRebatesCard({
           />
         </div>
         <span className="text-[18px] font-medium leading-[22px] text-[#2D2D2D]">
-          Pending Rebates
+          Active Claim
         </span>
       </div>
 
@@ -98,7 +98,7 @@ export default function PendingRebatesCard({
 
       {/* Bottom Description */}
       <span className="text-[12px] font-normal leading-[15px] text-[#575757] mt-1">
-        Upload receipts and track pending rebate verification here.
+        Claimed offers stay here until a receipt is uploaded and verified.
       </span>
     </section>
   );

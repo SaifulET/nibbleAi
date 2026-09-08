@@ -91,6 +91,7 @@ export default function AuthContainer() {
 
   const [autoOpenReviewItem, setAutoOpenReviewItem] = useState<string | null>(null);
   const [autoUploadReservationId, setAutoUploadReservationId] = useState<string | null>(null);
+  const [autoSelectReservationId, setAutoSelectReservationId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [authFlow, setAuthFlow] = useState<"signup" | "password-reset" | null>(null);
   const [passwordResetCode, setPasswordResetCode] = useState("");
@@ -191,13 +192,20 @@ export default function AuthContainer() {
   ) => {
     if (tab === "scan" && extra?.startsWith("reservation:")) {
       setAutoUploadReservationId(extra.replace("reservation:", ""));
+      setAutoSelectReservationId(null);
+      setAutoOpenReviewItem(null);
+    } else if (tab === "scan" && extra?.startsWith("claim:")) {
+      setAutoSelectReservationId(extra.replace("claim:", ""));
+      setAutoUploadReservationId(null);
       setAutoOpenReviewItem(null);
     } else if (extra) {
       setAutoOpenReviewItem(extra);
       setAutoUploadReservationId(null);
+      setAutoSelectReservationId(null);
     } else {
       setAutoOpenReviewItem(null);
       setAutoUploadReservationId(null);
+      setAutoSelectReservationId(null);
     }
 
     if (tab === "offer" || tab === "brand") {
@@ -379,8 +387,10 @@ export default function AuthContainer() {
           onTabChange={handleTabChange}
           autoOpenReviewItem={autoOpenReviewItem}
           autoUploadReservationId={autoUploadReservationId}
+          autoSelectReservationId={autoSelectReservationId}
           onClearAutoOpenReview={() => setAutoOpenReviewItem(null)}
           onClearAutoUploadReservation={() => setAutoUploadReservationId(null)}
+          onClearAutoSelectReservation={() => setAutoSelectReservationId(null)}
         />
       </div>
     );

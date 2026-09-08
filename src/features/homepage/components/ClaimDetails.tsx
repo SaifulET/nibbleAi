@@ -51,9 +51,10 @@ export default function ClaimDetails({ campaignId, onBack, onNavigate, onTabChan
     }
 
     try {
-      await claimOffer(id);
+      const reservation = await claimOffer(id);
+      const reservationId = String(reservation.id || reservation.reservation || "");
       setMessage("Offer claimed. Upload your receipt to complete the reward.");
-      onTabChange("scan");
+      onTabChange("scan", reservationId ? `claim:${reservationId}` : undefined);
     } catch {
       const backendMessage = useConsumerApiStore.getState().error;
       setMessage(backendMessage || "Could not claim this offer.");
