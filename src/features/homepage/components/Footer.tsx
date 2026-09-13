@@ -9,10 +9,11 @@ interface FooterProps {
 
 export default function Footer({ onTabChange }: FooterProps) {
   const [email, setEmail] = useState("");
+  const [subscribeMessage, setSubscribeMessage] = useState("");
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Subscribed:", email);
+    setSubscribeMessage("Newsletter signup is not connected to the backend yet.");
     setEmail("");
   };
 
@@ -65,6 +66,11 @@ export default function Footer({ onTabChange }: FooterProps) {
                 Sign Up
               </button>
             </form>
+            {subscribeMessage && (
+              <p className="text-[12px] leading-[16px] text-[#575757]">
+                {subscribeMessage}
+              </p>
+            )}
           </div>
 
           {/* Column 2: Help & Support Column (Frame 2147229112) */}

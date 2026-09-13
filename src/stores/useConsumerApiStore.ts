@@ -117,7 +117,20 @@ const paginationMeta = (response: unknown, page: number): PaginationState => {
 };
 
 const readError = (error: unknown) =>
-  error instanceof ApiError ? error.message : "Something went wrong.";
+  error instanceof ApiError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : "Something went wrong.";
+
+const roleValue = (profile: ApiRecord | null | undefined) =>
+  String(profile?.role ?? "").trim().toLowerCase();
+
+const isConsumerProfile = (profile: ApiRecord | null | undefined) =>
+  roleValue(profile) === "consumer" || roleValue(profile) === "customer";
+
+const consumerAccessError =
+  "This account is not a customer account. Please use the correct portal for this user.";
 
 const optionalListResponse = async (
   request: Promise<unknown>
@@ -287,6 +300,10 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
           });
           get().setTokens(tokens.access, tokens.refresh);
           const user = await nibblApi.me();
+          if (!isConsumerProfile(user)) {
+            get().clearAuth();
+            throw new Error(consumerAccessError);
+          }
           set({ user, status: "success" });
         } catch (error) {
           set({ status: "error", error: readError(error) });
@@ -359,6 +376,11 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
         set({ status: "loading", error: null });
         try {
           const user = await nibblApi.me();
+          if (!isConsumerProfile(user)) {
+            get().clearAuth();
+            set({ status: "error", error: consumerAccessError });
+            return false;
+          }
           set({ user, status: "success" });
           return true;
         } catch (error) {
@@ -374,10 +396,13 @@ export const useConsumerApiStore = create<ConsumerApiState>()(
       loadProfile: async () => {
         set({ status: "loading", error: null });
         try {
-          const [user, notificationPreferences] = await Promise.all([
-            nibblApi.me(),
-            nibblApi.notificationPreferences(),
-          ]);
+          const user = await nibblApi.me();
+          if (!isConsumerProfile(user)) {
+            get().clearAuth();
+            set({ status: "error", error: consumerAccessError });
+            return;
+          }
+          const notificationPreferences = await nibblApi.notificationPreferences();
           set({ user, notificationPreferences, status: "success" });
         } catch (error) {
           if (error instanceof ApiError && error.status === 401) {

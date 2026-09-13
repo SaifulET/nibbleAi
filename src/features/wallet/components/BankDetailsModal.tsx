@@ -5,42 +5,21 @@ import { useState } from "react";
 interface BankDetailsModalProps {
   onClose: () => void;
   onSubmit: (details: {
-    accountName: string;
-    bankName: string;
-    branchName: string;
-    accountNumber: string;
-    routingNumber: string;
-    accountType: string;
+    provider: "paypal" | "venmo";
+    handle: string;
   }) => void;
 }
 
 export default function BankDetailsModal({ onClose, onSubmit }: BankDetailsModalProps) {
-  const [accountName, setAccountName] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [branchName, setBranchName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [routingNumber, setRoutingNumber] = useState("");
-  const [accountType, setAccountType] = useState("");
+  const [provider, setProvider] = useState<"paypal" | "venmo">("paypal");
+  const [handle, setHandle] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !accountName.trim() ||
-      !bankName.trim() ||
-      !branchName.trim() ||
-      !accountNumber.trim() ||
-      !routingNumber.trim() ||
-      !accountType.trim()
-    ) {
-      return;
-    }
+    if (!handle.trim()) return;
     onSubmit({
-      accountName,
-      bankName,
-      branchName,
-      accountNumber,
-      routingNumber,
-      accountType,
+      provider,
+      handle: handle.trim(),
     });
   };
 
@@ -60,108 +39,43 @@ export default function BankDetailsModal({ onClose, onSubmit }: BankDetailsModal
 
         {/* Header Title */}
         <h2 className="text-[24px] font-semibold leading-[29px] text-[#1F1D1D] w-full border-b border-gray-100 pb-2">
-          Enter Bank Details
+          Enter Payout Details
         </h2>
 
         {/* Form Details Grid */}
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-          
-          {/* Account Holder Name */}
           <div className="w-full flex flex-col gap-2">
             <label className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
-              Account Holder Name
+              Provider
             </label>
-            <div className="w-full h-[50px] bg-[#FEFEFE] border border-[#959595] rounded-[8px] flex items-center px-4">
-              <input
-                type="text"
-                placeholder="Name"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                required
-                className="w-full bg-transparent border-none text-[#1F1D1D] placeholder-[#737373] text-[14px] font-normal leading-[17px] focus:outline-none"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              {(["paypal", "venmo"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setProvider(option)}
+                  className={`h-[50px] rounded-[8px] border text-[15px] font-medium capitalize transition-colors ${
+                    provider === option
+                      ? "border-[#3E3EDF] bg-[#3E3EDF] text-white"
+                      : "border-[#959595] bg-[#FEFEFE] text-[#1F1D1D] hover:border-[#3E3EDF]"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Bank Name */}
           <div className="w-full flex flex-col gap-2">
             <label className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
-              Bank Name
+              Payout Handle
             </label>
             <div className="w-full h-[50px] bg-[#FEFEFE] border border-[#959595] rounded-[8px] flex items-center px-4">
               <input
                 type="text"
-                placeholder="ABC Bank"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                required
-                className="w-full bg-transparent border-none text-[#1F1D1D] placeholder-[#737373] text-[14px] font-normal leading-[17px] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Branch Name (Ignored repetitive field, only rendering one) */}
-          <div className="w-full flex flex-col gap-2">
-            <label className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
-              Branch Name
-            </label>
-            <div className="w-full h-[50px] bg-[#FEFEFE] border border-[#959595] rounded-[8px] flex items-center px-4">
-              <input
-                type="text"
-                placeholder="ABC Branch"
-                value={branchName}
-                onChange={(e) => setBranchName(e.target.value)}
-                required
-                className="w-full bg-transparent border-none text-[#1F1D1D] placeholder-[#737373] text-[14px] font-normal leading-[17px] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Account Number */}
-          <div className="w-full flex flex-col gap-2">
-            <label className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
-              Account Number
-            </label>
-            <div className="w-full h-[50px] bg-[#FEFEFE] border border-[#959595] rounded-[8px] flex items-center px-4">
-              <input
-                type="text"
-                placeholder="12345"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                required
-                className="w-full bg-transparent border-none text-[#1F1D1D] placeholder-[#737373] text-[14px] font-normal leading-[17px] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Routing Number */}
-          <div className="w-full flex flex-col gap-2">
-            <label className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
-              Routing Number
-            </label>
-            <div className="w-full h-[50px] bg-[#FEFEFE] border border-[#959595] rounded-[8px] flex items-center px-4">
-              <input
-                type="text"
-                placeholder="12345"
-                value={routingNumber}
-                onChange={(e) => setRoutingNumber(e.target.value)}
-                required
-                className="w-full bg-transparent border-none text-[#1F1D1D] placeholder-[#737373] text-[14px] font-normal leading-[17px] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Account Type */}
-          <div className="w-full flex flex-col gap-2">
-            <label className="text-[16px] font-medium leading-[24px] text-[#1F1D1D]">
-              Account Type
-            </label>
-            <div className="w-full h-[50px] bg-[#FEFEFE] border border-[#959595] rounded-[8px] flex items-center px-4">
-              <input
-                type="text"
-                placeholder="savings/Current"
-                value={accountType}
-                onChange={(e) => setAccountType(e.target.value)}
+                placeholder={provider === "paypal" ? "paypal@example.com" : "@venmo"}
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
                 required
                 className="w-full bg-transparent border-none text-[#1F1D1D] placeholder-[#737373] text-[14px] font-normal leading-[17px] focus:outline-none"
               />

@@ -52,7 +52,7 @@ export default function WalletCard({ balance = 51.25, onViewWallet }: WalletCard
         {/* View Wallet Button Wrapper (Frame 2147229130 / Frame 2147229086) */}
         <div className="w-full flex justify-center">
           <button
-            onClick={onViewWallet || (() => console.log("Opening wallet details..."))}
+            onClick={onViewWallet}
             className="w-full max-w-[520px] h-[49px] bg-[#FEFEFE] hover:bg-gray-50 active:scale-[0.98] text-[#3E3EDF] font-medium text-[24px] leading-[29px] rounded-[12px] flex items-center justify-center transition-all cursor-pointer shadow-sm focus:outline-none"
           >
             View Wallet

@@ -102,9 +102,11 @@ export default function AuthContainer() {
     forgotPassword,
     resetPassword,
     verifyEmail,
+    resendEmailVerification,
     logout,
     validateSession,
     loadOfferDetails,
+    pendingEmail,
     error,
   } = useConsumerApiStore();
 
@@ -278,6 +280,16 @@ export default function AuthContainer() {
     }
   };
 
+  const handleResendCode = async () => {
+    if (authFlow === "password-reset") {
+      if (!pendingEmail) throw new Error("No email is waiting for password reset.");
+      await forgotPassword(pendingEmail);
+      return;
+    }
+
+    await resendEmailVerification();
+  };
+
   const handleResetPasswordSubmit = async (password: string) => {
     try {
       await resetPassword(passwordResetCode, password);
@@ -438,6 +450,7 @@ export default function AuthContainer() {
           <VerifyEmailForm
             onNavigate={setStage}
             onSubmit={handleVerifyEmailSubmit}
+            onResend={handleResendCode}
           />
         )}
         {stage === "reset-password" && (

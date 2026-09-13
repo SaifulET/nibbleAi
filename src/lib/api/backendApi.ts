@@ -60,7 +60,7 @@ export const backendApi = {
     updateMe: { method: "PATCH", path: "/users/me/", auth: true },
     deleteMe: { method: "DELETE", path: "/users/me/", auth: true },
     changePassword: {
-      method: "PATCH",
+      method: "POST",
       path: "/users/me/change-password/",
       auth: true,
     },

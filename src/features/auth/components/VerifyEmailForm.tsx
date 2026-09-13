@@ -6,13 +6,17 @@ import { AuthStage } from "../types/auth.types";
 interface VerifyEmailFormProps {
   onNavigate: (stage: AuthStage) => void;
   onSubmit: (otp: string) => void;
+  onResend?: () => Promise<void>;
 }
 
 export default function VerifyEmailForm({
   onNavigate,
   onSubmit,
+  onResend,
 }: VerifyEmailFormProps) {
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
+  const [resendMessage, setResendMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleChange = (element: HTMLInputElement, index: number) => {
@@ -52,6 +56,20 @@ export default function VerifyEmailForm({
     const otpString = otp.join("");
     if (otpString.length === 6) {
       onSubmit(otpString);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!onResend || isResending) return;
+    setIsResending(true);
+    setResendMessage("");
+    try {
+      await onResend();
+      setResendMessage("A new code has been sent.");
+    } catch {
+      setResendMessage("Could not resend the code. Please try again.");
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -116,12 +134,18 @@ export default function VerifyEmailForm({
         Didn&apos;t receive code?{" "}
         <button
           type="button"
-          onClick={() => console.log("OTP Resent!")}
-          className="text-[#3E3EDF] font-semibold hover:underline"
+          onClick={() => void handleResend()}
+          disabled={!onResend || isResending}
+          className="text-[#3E3EDF] font-semibold hover:underline disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Resend OTP
+          {isResending ? "Sending..." : "Resend OTP"}
         </button>
       </div>
+      {resendMessage && (
+        <p className="mt-2 text-center text-xs font-medium text-gray-500">
+          {resendMessage}
+        </p>
+      )}
     </div>
   );
 }

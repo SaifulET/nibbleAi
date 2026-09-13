@@ -80,7 +80,7 @@ export default function WalletContainer({ onTabChange }: WalletContainerProps) {
               setWalletMessage("You need at least $0.01 available before requesting a withdrawal.");
               return;
             }
-            void createPayoutMethod("paypal", details.accountNumber || details.accountName)
+            void createPayoutMethod(details.provider, details.handle)
               .then((method) => requestWithdrawal(String(method.id), available.toFixed(2)))
               .then(() => setWalletMessage("Withdrawal request submitted."))
               .catch((error: unknown) => {
