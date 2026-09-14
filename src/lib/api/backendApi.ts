@@ -32,6 +32,15 @@ export const backendApi = {
     health: { method: "GET", path: "/health/", auth: false },
     config: { method: "GET", path: "/config/", auth: false },
   },
+  content: {
+    faqs: { method: "GET", path: "/faqs/", auth: false },
+    terms: { method: "GET", path: "/content/terms/", auth: false },
+    privacyPolicy: {
+      method: "GET",
+      path: "/content/privacy-policy/",
+      auth: false,
+    },
+  },
   auth: {
     register: { method: "POST", path: "/auth/register/", auth: false },
     login: { method: "POST", path: "/auth/login/", auth: false },
@@ -557,6 +566,29 @@ export const backendApi = {
       path: "/admin/analytics/snapshots/",
       auth: true,
     },
+    faqs: { method: "GET", path: "/admin/faqs/", auth: true },
+    createFaq: { method: "POST", path: "/admin/faqs/", auth: true },
+    faqDetail: (faqId: string): ApiEndpoint => ({
+      method: "GET",
+      path: `/admin/faqs/${faqId}/`,
+      auth: true,
+    }),
+    terms: { method: "GET", path: "/admin/content/terms/", auth: true },
+    updateTerms: {
+      method: "PATCH",
+      path: "/admin/content/terms/",
+      auth: true,
+    },
+    privacyPolicy: {
+      method: "GET",
+      path: "/admin/content/privacy-policy/",
+      auth: true,
+    },
+    updatePrivacyPolicy: {
+      method: "PATCH",
+      path: "/admin/content/privacy-policy/",
+      auth: true,
+    },
   },
   billing: {
     plans: { method: "GET", path: "/plans/", auth: true },
@@ -752,6 +784,29 @@ export const nibblApi = {
       body
     ),
   config: () => requestEndpoint<ApiRecord>(backendApi.common.config),
+  faqs: () => requestEndpoint<ApiRecord[]>(backendApi.content.faqs),
+  terms: () => requestEndpoint<ApiRecord>(backendApi.content.terms),
+  privacyPolicy: () =>
+    requestEndpoint<ApiRecord>(backendApi.content.privacyPolicy),
+  adminFaqs: () => requestEndpoint<ApiRecord[]>(backendApi.admin.faqs),
+  createAdminFaq: (body: ApiRecord) =>
+    requestEndpoint<ApiRecord>(backendApi.admin.createFaq, body),
+  updateAdminFaq: (faqId: string, body: ApiRecord) =>
+    apiClient.request<ApiRecord>(backendApi.admin.faqDetail(faqId), {
+      method: "PATCH",
+      body,
+    }),
+  deleteAdminFaq: (faqId: string) =>
+    apiClient.request<null>(backendApi.admin.faqDetail(faqId), {
+      method: "DELETE",
+    }),
+  adminTerms: () => requestEndpoint<ApiRecord>(backendApi.admin.terms),
+  updateAdminTerms: (content: string) =>
+    requestEndpoint<ApiRecord>(backendApi.admin.updateTerms, { content }),
+  adminPrivacyPolicy: () =>
+    requestEndpoint<ApiRecord>(backendApi.admin.privacyPolicy),
+  updateAdminPrivacyPolicy: (content: string) =>
+    requestEndpoint<ApiRecord>(backendApi.admin.updatePrivacyPolicy, { content }),
   offers: (query?: RequestOptions["query"]) =>
     requestEndpoint<PaginatedResponse<ApiRecord>>(backendApi.consumer.offers, undefined, query),
   offerCategories: () =>

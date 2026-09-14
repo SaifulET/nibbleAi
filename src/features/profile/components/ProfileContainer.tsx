@@ -5,7 +5,8 @@ import Image from "next/image";
 import UserAvatar from "@/components/UserAvatar";
 import Header from "../../homepage/components/Header";
 import Footer from "../../homepage/components/Footer";
-import { useConsumerApiStore } from "@/stores/useConsumerApiStore";
+import { LoadState, useConsumerApiStore } from "@/stores/useConsumerApiStore";
+import { ApiError, ApiRecord, nibblApi } from "@/lib/api/backendApi";
 import { displayOffer, imageUrl, text } from "@/features/homepage/lib/offerMappers";
 
 type ProfileView = "menu" | "edit" | "saved" | "privacy" | "terms" | "notifications" | "help" | "faq" | "contact-us";
@@ -19,23 +20,19 @@ interface ProfileContainerProps {
   onTabChange?: (tab: "offer" | "wallet" | "scan" | "profile" | "brand" | "notification", extra?: string) => void;
 }
 
-const policyText =
-  "NibblAI profile policy content is static in this frontend because the backend does not expose legal-content endpoints yet. Account, saved offer, notification, and preference data on this screen are loaded from the backend.";
+type LegalContent = {
+  title: string;
+  content: string;
+  updated_at?: string;
+};
 
-const faqs = [
-  {
-    q: "Where can I find ongoing offers and deals?",
-    a: "Open the Offer tab. The offer list is loaded from the backend and can be filtered by backend categories.",
-  },
-  {
-    q: "What should I do if a QR code does not scan properly?",
-    a: "Use the Scan tab and upload the receipt image manually. Receipt validation is handled by the backend.",
-  },
-  {
-    q: "How do I contact support if I face a problem?",
-    a: "Use the contact links in Help & Support. A dedicated consumer support API is not exposed by the backend yet.",
-  },
-];
+type PublicFaq = {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order?: number;
+  is_active?: boolean;
+};
 
 const viewFromInitial = (initialView: ProfileContainerProps["initialView"]): ProfileView => {
   if (initialView === "notifications") return "notifications";
@@ -44,6 +41,27 @@ const viewFromInitial = (initialView: ProfileContainerProps["initialView"]): Pro
   }
   return "menu";
 };
+
+const contentErrorMessage = (error: unknown) =>
+  error instanceof ApiError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : "Unable to load this content right now.";
+
+const toLegalContent = (record: ApiRecord): LegalContent => ({
+  title: text(record.title, ""),
+  content: text(record.content, ""),
+  updated_at: text(record.updated_at, ""),
+});
+
+const toPublicFaq = (record: ApiRecord, index: number): PublicFaq => ({
+  id: text(record.id, String(index)),
+  question: text(record.question, "Untitled question"),
+  answer: text(record.answer, ""),
+  sort_order: Number(record.sort_order ?? index),
+  is_active: Boolean(record.is_active ?? true),
+});
 
 export default function ProfileContainer({
   initialView = "menu",
@@ -63,6 +81,11 @@ export default function ProfileContainer({
   const [showNewPass, setShowNewPass] = useState(false);
   const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [privacyPolicy, setPrivacyPolicy] = useState<LegalContent | null>(null);
+  const [termsContent, setTermsContent] = useState<LegalContent | null>(null);
+  const [faqs, setFaqs] = useState<PublicFaq[]>([]);
+  const [contentStatus, setContentStatus] = useState<LoadState>("idle");
+  const [contentError, setContentError] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
@@ -96,6 +119,52 @@ export default function ProfileContainer({
     if (activeView === "saved") void loadSavedOffers();
     if (activeView === "notifications") void loadNotifications();
   }, [activeView, loadNotifications, loadSavedOffers]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadContent = async () => {
+      if (activeView !== "privacy" && activeView !== "terms" && activeView !== "faq") {
+        return;
+      }
+
+      setContentStatus("loading");
+      setContentError(null);
+
+      try {
+        if (activeView === "privacy") {
+          const document = await nibblApi.privacyPolicy();
+          if (!cancelled) setPrivacyPolicy(toLegalContent(document));
+        }
+
+        if (activeView === "terms") {
+          const document = await nibblApi.terms();
+          if (!cancelled) setTermsContent(toLegalContent(document));
+        }
+
+        if (activeView === "faq") {
+          const faqList = await nibblApi.faqs();
+          if (!cancelled) {
+            setFaqs(faqList.map(toPublicFaq));
+            setActiveFaqIndex(null);
+          }
+        }
+
+        if (!cancelled) setContentStatus("success");
+      } catch (contentLoadError) {
+        if (!cancelled) {
+          setContentStatus("error");
+          setContentError(contentErrorMessage(contentLoadError));
+        }
+      }
+    };
+
+    void loadContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
 
   useEffect(() => {
     const nextName = text(user?.full_name ?? user?.name, "");
@@ -394,8 +463,18 @@ export default function ProfileContainer({
 
         {(activeView === "privacy" || activeView === "terms") && (
           <ArticleView
-            title={activeView === "privacy" ? "Privacy Policy" : "Terms & Condition"}
-            body={policyText}
+            title={
+              activeView === "privacy"
+                ? privacyPolicy?.title || "Privacy Policy"
+                : termsContent?.title || "Terms & Condition"
+            }
+            body={
+              activeView === "privacy"
+                ? privacyPolicy?.content || ""
+                : termsContent?.content || ""
+            }
+            loading={contentStatus === "loading"}
+            error={contentError}
             onBack={() => setActiveView("menu")}
           />
         )}
@@ -455,24 +534,39 @@ export default function ProfileContainer({
               <BackCircle onClick={() => setActiveView("help")} align="right" />
             </div>
             <div className="flex flex-col gap-3.5 w-full">
+              {contentStatus === "loading" && (
+                <div className="rounded-lg border border-gray-100 bg-white p-6 text-center text-sm text-[#575757]">
+                  Loading FAQ...
+                </div>
+              )}
+              {contentStatus === "error" && contentError && (
+                <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-600">
+                  {contentError}
+                </div>
+              )}
+              {contentStatus !== "loading" && faqs.length === 0 && !contentError && (
+                <div className="rounded-lg border border-gray-100 bg-white p-6 text-center text-sm text-[#575757]">
+                  No FAQ records have been published yet.
+                </div>
+              )}
               {faqs.map((faq, index) => (
-                <div key={faq.q} className="w-full bg-[#FEFEFE] shadow-[0px_2px_4px_rgba(0,0,0,0.11)] rounded-[11px] overflow-hidden border border-gray-100 transition-all duration-300">
+                <div key={faq.id} className="w-full bg-[#FEFEFE] shadow-[0px_2px_4px_rgba(0,0,0,0.11)] rounded-[11px] overflow-hidden border border-gray-100 transition-all duration-300">
                   <button
                     onClick={() => setActiveFaqIndex(activeFaqIndex === index ? null : index)}
-                    className="w-full p-5 flex items-center justify-between text-left hover:bg-gray-50 focus:outline-none cursor-pointer"
+                    className="w-full p-5 flex items-center justify-between gap-4 text-left hover:bg-gray-50 focus:outline-none cursor-pointer"
                   >
                     <span className="text-[16px] font-medium leading-[19px] text-[#1F1D1D]">
-                      {faq.q}
+                      {faq.question}
                     </span>
-                    <span className={`w-5 h-5 flex items-center justify-center text-sm font-bold text-gray-500 transform transition-transform duration-200 ${
+                    <span className={`w-5 h-5 flex shrink-0 items-center justify-center text-sm font-bold text-gray-500 transform transition-transform duration-200 ${
                       activeFaqIndex === index ? "rotate-90 text-[#3E3EDF]" : "-rotate-90"
                     }`}>
                       &rarr;
                     </span>
                   </button>
                   {activeFaqIndex === index && (
-                    <div className="px-5 pb-5 pt-1 text-[12px] sm:text-[14px] font-normal leading-[20px] text-[#575757] border-t border-gray-50 bg-gray-50/30">
-                      {faq.a}
+                    <div className="px-5 pb-5 pt-1 text-[12px] sm:text-[14px] font-normal leading-[20px] text-[#575757] border-t border-gray-50 bg-gray-50/30 whitespace-pre-line">
+                      {faq.answer || "No answer has been published for this question."}
                     </div>
                   )}
                 </div>
@@ -605,7 +699,21 @@ function PasswordField({
   );
 }
 
-function ArticleView({ title, body, onBack }: { title: string; body: string; onBack: () => void }) {
+function ArticleView({
+  title,
+  body,
+  loading,
+  error,
+  onBack,
+}: {
+  title: string;
+  body: string;
+  loading: boolean;
+  error: string | null;
+  onBack: () => void;
+}) {
+  const hasHtml = /<\/?[a-z][\s\S]*>/i.test(body);
+
   return (
     <div className="w-full max-w-[1052px] flex flex-col gap-6 mt-4">
       <div className="w-full flex items-center gap-4 border-b border-gray-150 pb-4">
@@ -614,9 +722,32 @@ function ArticleView({ title, body, onBack }: { title: string; body: string; onB
           {title}
         </h2>
       </div>
-      <p className="text-[14px] font-normal leading-[22px] text-[#575757] text-justify whitespace-pre-line tracking-wide">
-        {body}
-      </p>
+      {loading && (
+        <div className="rounded-lg border border-gray-100 bg-white p-6 text-center text-sm text-[#575757]">
+          Loading content...
+        </div>
+      )}
+      {!loading && error && (
+        <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-600">
+          {error}
+        </div>
+      )}
+      {!loading && !error && !body && (
+        <div className="rounded-lg border border-gray-100 bg-white p-6 text-center text-sm text-[#575757]">
+          No content has been published yet.
+        </div>
+      )}
+      {!loading && !error && body && hasHtml && (
+        <div
+          className="text-[14px] font-normal leading-[22px] text-[#575757] tracking-wide [&_a]:text-[#3E3EDF] [&_a]:underline [&_li]:ml-5 [&_ol]:list-decimal [&_p]:mb-4 [&_ul]:list-disc"
+          dangerouslySetInnerHTML={{ __html: body }}
+        />
+      )}
+      {!loading && !error && body && !hasHtml && (
+        <p className="text-[14px] font-normal leading-[22px] text-[#575757] text-justify whitespace-pre-line tracking-wide">
+          {body}
+        </p>
+      )}
     </div>
   );
 }
